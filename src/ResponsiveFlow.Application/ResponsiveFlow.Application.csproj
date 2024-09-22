@@ -1,5 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <ItemGroup>
+    <ProjectReference Include="..\ResponsiveFlow.Presentation\ResponsiveFlow.Presentation.csproj" />
+  </ItemGroup>
+
   <PropertyGroup>
     <AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
     <OutputType>WinExe</OutputType>
