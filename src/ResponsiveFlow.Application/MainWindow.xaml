@@ -9,6 +9,12 @@
         Height="500" Width="800"
         MinHeight="300" MinWidth="500"
         Title="{Binding Title, Mode=OneTime}">
-    <Grid>
-    </Grid>
+    <DockPanel LastChildFill="False">
+        <ProgressBar
+            DockPanel.Dock="Bottom"
+            Height="12"
+            HorizontalAlignment="Stretch"
+            IsIndeterminate="True"
+            Margin="8" />
+    </DockPanel>
 </Window>
