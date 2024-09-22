@@ -3,8 +3,12 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:rfp="clr-namespace:ResponsiveFlow;assembly=ResponsiveFlow.Presentation"
+        d:DataContext="{rfp:MainWindowViewModel}"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Height="500" Width="800"
+        MinHeight="300" MinWidth="500"
+        Title="{Binding Title, Mode=OneTime}">
     <Grid>
     </Grid>
 </Window>
