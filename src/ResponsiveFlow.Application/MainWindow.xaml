@@ -10,6 +10,9 @@
         MinHeight="300" MinWidth="500"
         Title="{Binding Title, Mode=OneTime}">
     <DockPanel LastChildFill="False">
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
+            <Button Margin="8" MinHeight="32" MinWidth="64" Command="{Binding RunCommand}">Run</Button>
+        </StackPanel>
         <ProgressBar
             DockPanel.Dock="Bottom"
             Height="12"

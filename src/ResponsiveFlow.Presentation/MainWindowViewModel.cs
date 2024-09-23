@@ -1,12 +1,29 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
+using CommunityToolkit.Mvvm.Input;
 
 namespace ResponsiveFlow;
 
 public sealed class MainWindowViewModel
 {
+    private readonly AsyncRelayCommand _runCommand;
+
+    public MainWindowViewModel() => _runCommand = new AsyncRelayCommand(ExecuteRunAsync);
+
+    public IAsyncRelayCommand RunCommand => _runCommand;
+
     public string Title { get; } = CreateTitle();
+
+    public void CancelRun() => _runCommand.Cancel();
+
+    private async Task ExecuteRunAsync(CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+            await Task.Delay(1000, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+    }
 
     private static string CreateTitle() =>
         TryGetVersion(out string? version) ? $"{nameof(ResponsiveFlow)} {version}" : nameof(ResponsiveFlow);
