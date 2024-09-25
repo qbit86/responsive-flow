@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Windows;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace ResponsiveFlow;
 
@@ -16,7 +17,8 @@ public partial class App
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
-        MainWindowViewModel viewModel = new();
+        MainModel model = new(NullLogger<MainModel>.Instance);
+        MainWindowViewModel viewModel = new(model);
         MainWindow window = new(viewModel);
         window.Show();
     }

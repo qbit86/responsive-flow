@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
@@ -9,9 +10,16 @@ namespace ResponsiveFlow;
 
 public sealed class MainWindowViewModel
 {
+    private readonly MainModel _model;
     private readonly AsyncRelayCommand _runCommand;
 
-    public MainWindowViewModel() => _runCommand = new AsyncRelayCommand(ExecuteRunAsync);
+    public MainWindowViewModel(MainModel model)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+
+        _model = model;
+        _runCommand = new AsyncRelayCommand(ExecuteRunAsync);
+    }
 
     public IAsyncRelayCommand RunCommand => _runCommand;
 
