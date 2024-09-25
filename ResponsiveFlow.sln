@@ -18,6 +18,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ResponsiveFlow.Application"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ResponsiveFlow.Presentation", "src\ResponsiveFlow.Presentation\ResponsiveFlow.Presentation.csproj", "{3ACF3B1D-CE7D-4554-9B20-AEC65132CE12}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ResponsiveFlow.Models", "src\ResponsiveFlow.Models\ResponsiveFlow.Models.csproj", "{E2EC989B-A74A-4E07-BFC2-F51A60D033B9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -35,9 +37,14 @@ Global
 		{3ACF3B1D-CE7D-4554-9B20-AEC65132CE12}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3ACF3B1D-CE7D-4554-9B20-AEC65132CE12}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3ACF3B1D-CE7D-4554-9B20-AEC65132CE12}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E2EC989B-A74A-4E07-BFC2-F51A60D033B9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E2EC989B-A74A-4E07-BFC2-F51A60D033B9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E2EC989B-A74A-4E07-BFC2-F51A60D033B9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E2EC989B-A74A-4E07-BFC2-F51A60D033B9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{98A14466-BE76-4F17-8CCA-3723A74381C3} = {1D7319D4-6DA2-4EB5-89BE-EBFA17FDDCBE}
 		{3ACF3B1D-CE7D-4554-9B20-AEC65132CE12} = {1D7319D4-6DA2-4EB5-89BE-EBFA17FDDCBE}
+		{E2EC989B-A74A-4E07-BFC2-F51A60D033B9} = {1D7319D4-6DA2-4EB5-89BE-EBFA17FDDCBE}
 	EndGlobalSection
 EndGlobal

@@ -10,4 +10,8 @@
     <PackageReference Include="CommunityToolkit.Mvvm" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\ResponsiveFlow.Models\ResponsiveFlow.Models.csproj" />
+  </ItemGroup>
+
 </Project>
