@@ -27,10 +27,11 @@ public sealed class MainWindowViewModel
 
     public void CancelRun() => _runCommand.Cancel();
 
-    private async Task ExecuteRunAsync(CancellationToken cancellationToken)
+    private Task ExecuteRunAsync(CancellationToken cancellationToken)
     {
-        while (!cancellationToken.IsCancellationRequested)
-            await Task.Delay(1000, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+        var task = _model.RunAsync(cancellationToken);
+        // TODO: Start the loop of polling the channel for results and updating the UI.
+        return task;
     }
 
     private static string CreateTitle() =>
