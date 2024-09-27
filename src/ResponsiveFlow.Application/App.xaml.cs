@@ -24,6 +24,9 @@ public partial class App
         var configurationRoot = configurationBuilder.Build();
         services.AddSingleton<IConfiguration>(configurationRoot);
 
+        var projectConfigurationSession = configurationRoot.GetSection("Project");
+        services.Configure<ProjectDto>(projectConfigurationSession);
+
         services.AddLogging(ConfigureLogging);
         services.AddSingleton<MainModel>();
         services.AddSingleton<MainWindowViewModel>();

@@ -2,17 +2,21 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace ResponsiveFlow;
 
 public sealed partial class MainModel
 {
     private readonly ILogger _logger;
+    private readonly ProjectDto _projectDto;
 
-    public MainModel(ILogger<MainModel> logger)
+    public MainModel(IOptions<ProjectDto> projectDto, ILogger<MainModel> logger)
     {
+        ArgumentNullException.ThrowIfNull(projectDto);
         ArgumentNullException.ThrowIfNull(logger);
 
+        _projectDto = projectDto.Value;
         _logger = logger;
     }
 
