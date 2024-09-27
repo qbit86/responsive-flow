@@ -1,12 +1,25 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <ItemGroup>
-    <ProjectReference Include="..\ResponsiveFlow.Presentation\ResponsiveFlow.Presentation.csproj" />
-  </ItemGroup>
+  <PropertyGroup>
+    <AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UserSecretsId>e9c5c602-cf85-40ac-be12-02324016c54c</UserSecretsId>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
 
   <ItemGroup>
     <ApplicationDefinition Remove="App.xaml" />
     <Page Include="App.xaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="appsettings.*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <ItemGroup>
@@ -21,12 +34,8 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" />
   </ItemGroup>
 
-  <PropertyGroup>
-    <AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <UserSecretsId>e9c5c602-cf85-40ac-be12-02324016c54c</UserSecretsId>
-    <UseWPF>true</UseWPF>
-  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ResponsiveFlow.Presentation\ResponsiveFlow.Presentation.csproj" />
+  </ItemGroup>
 
 </Project>
