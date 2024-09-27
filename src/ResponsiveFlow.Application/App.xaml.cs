@@ -35,10 +35,13 @@ public partial class App
         _ = application.Run();
         return;
 
-        void ConfigureLogging(ILoggingBuilder builder)
+        void ConfigureLogging(ILoggingBuilder loggingBuilder)
         {
             // https://github.com/dotnet/runtime/blob/v8.0.8/src/libraries/Microsoft.Extensions.Hosting/src/HostingHostBuilderExtensions.cs#L275-L317
-            builder.AddConfiguration(configurationRoot.GetSection("Logging"));
+            loggingBuilder.AddConfiguration(configurationRoot.GetSection("Logging"));
+#if DEBUG
+            loggingBuilder.AddDebug();
+#endif
         }
     }
 
