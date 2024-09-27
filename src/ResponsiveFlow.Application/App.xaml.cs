@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.Http;
 using System.Reflection;
 using System.Windows;
 using CommunityToolkit.Mvvm.DependencyInjection;
@@ -24,10 +25,10 @@ public partial class App
         var configurationRoot = configurationBuilder.Build();
         services.AddSingleton<IConfiguration>(configurationRoot);
 
-        var projectConfigurationSession = configurationRoot.GetSection("Project");
-        services.Configure<ProjectDto>(projectConfigurationSession);
-
         services.AddLogging(ConfigureLogging);
+
+        services.Configure<ProjectDto>(configurationRoot.GetSection("Project"));
+        services.AddSingleton(CreateHttpClient);
         services.AddSingleton<MainModel>();
         services.AddSingleton<MainWindowViewModel>();
         services.AddSingleton<MainWindow>();
@@ -73,4 +74,6 @@ public partial class App
         configurationBuilder.AddEnvironmentVariables();
         configurationBuilder.AddCommandLine(Environment.GetCommandLineArgs());
     }
+
+    private static HttpClient CreateHttpClient(IServiceProvider serviceProvider) => new();
 }
