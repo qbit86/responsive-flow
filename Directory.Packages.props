@@ -5,7 +5,12 @@
   <ItemGroup>
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.3.2" />
     <PackageVersion Include="DotNet.ReproducibleBuilds" Version="1.2.4" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.CommandLine" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.UserSecrets" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Configuration" Version="8.0.0" />
