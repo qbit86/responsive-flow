@@ -24,11 +24,11 @@ public sealed partial class MainWindowViewModel
 
     public void CancelRun() => _runCommand.Cancel();
 
-    private Task ExecuteRunAsync(CancellationToken cancellationToken)
+    private Task<Report> ExecuteRunAsync(CancellationToken cancellationToken)
     {
-        var task = _model.RunAsync(cancellationToken);
+        var reportFuture = _model.RunAsync(cancellationToken);
         // TODO: Start the loop of polling the channel for results and updating the UI.
-        return task;
+        return reportFuture;
     }
 
     private static string CreateTitle() =>
