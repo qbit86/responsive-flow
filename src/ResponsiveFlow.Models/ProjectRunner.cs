@@ -7,7 +7,6 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using ResponseFuture = System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage>;
 
 namespace ResponsiveFlow;
 
@@ -18,14 +17,14 @@ internal sealed partial class ProjectRunner
 
     private readonly HttpClient _httpClient;
     private readonly ILogger _logger;
-    private readonly Channel<ResponseFuture> _responseChannel;
+    private readonly Channel<ResponseInfo> _responseChannel;
     private readonly List<Uri> _uris;
 
     private ProjectRunner(
         List<Uri> uris,
         string outputDirectory,
         HttpClient httpClient,
-        Channel<ResponseFuture> responseChannel,
+        Channel<ResponseInfo> responseChannel,
         ILogger logger)
     {
         _uris = uris;
@@ -39,9 +38,7 @@ internal sealed partial class ProjectRunner
 
     internal string OutputDirectory { get; }
 
-    private ChannelReader<ResponseFuture> ResponseChannelReader => _responseChannel.Reader;
-
-    private ChannelWriter<ResponseFuture> ResponseChannelWriter => _responseChannel.Writer;
+    private ChannelWriter<ResponseInfo> ResponseChannelWriter => _responseChannel.Writer;
 
     internal static ProjectRunner Create(ProjectDto projectDto, HttpClient httpClient, ILoggerFactory loggerFactory)
     {
@@ -52,7 +49,7 @@ internal sealed partial class ProjectRunner
         var validUris = GetValidUris(projectDto);
         var startTime = DateTime.Now;
         string effectiveOutputDirectory = GetOutputDirectoryOrFallback(projectDto, startTime);
-        var responseChannel = Channel.CreateBounded<ResponseFuture>(ResponseChannelCapacity);
+        var responseChannel = Channel.CreateBounded<ResponseInfo>(ResponseChannelCapacity);
         var logger = loggerFactory.CreateLogger<ProjectRunner>();
         return new(validUris, effectiveOutputDirectory, httpClient, responseChannel, logger);
     }
@@ -67,7 +64,9 @@ internal sealed partial class ProjectRunner
                 var uri = _uris[i];
                 LogProcessUrl(uri.AbsoluteUri, i, _uris.Count);
                 var uriWorkItems = Enumerable.Repeat(uri, RequestCount);
-                var producingTask = Parallel.ForEachAsync(uriWorkItems, cancellationToken, Produce);
+                int index = i;
+                var producingTask = Parallel.ForEachAsync(
+                    uriWorkItems, cancellationToken, (u, c) => ProduceAsync(index, u, c));
                 await producingTask.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
             }
         }
@@ -75,12 +74,13 @@ internal sealed partial class ProjectRunner
         return new();
     }
 
-    private ValueTask Produce(Uri uri, CancellationToken cancellationToken)
+    private ValueTask ProduceAsync(int index, Uri uri, CancellationToken cancellationToken)
     {
         if (cancellationToken.IsCancellationRequested)
             return ValueTask.CompletedTask;
-        var responseFuture = _httpClient.GetAsync(uri, HttpCompletionOption.ResponseContentRead, cancellationToken);
-        return ResponseChannelWriter.WriteAsync(responseFuture, cancellationToken);
+        var future = _httpClient.GetAsync(uri, HttpCompletionOption.ResponseContentRead, cancellationToken);
+        ResponseInfo responseInfo = new(index, uri, future);
+        return ResponseChannelWriter.WriteAsync(responseInfo, cancellationToken);
     }
 
     private static string GetOutputDirectoryOrFallback(ProjectDto projectDto, DateTime startTime)
