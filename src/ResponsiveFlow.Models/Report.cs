@@ -1,3 +1,3 @@
 namespace ResponsiveFlow;
 
-public sealed record Report;
+public readonly record struct Report;

@@ -41,7 +41,7 @@ public partial class App
 
         void ConfigureLogging(ILoggingBuilder loggingBuilder)
         {
-            // https://github.com/dotnet/runtime/blob/v8.0.8/src/libraries/Microsoft.Extensions.Hosting/src/HostingHostBuilderExtensions.cs#L275-L317
+            // https://github.com/dotnet/runtime/blob/v8.0.8/src/libraries/Microsoft.Extensions.Hosting/src/HostingHostBuilderExtensions.cs#L298-L308
             loggingBuilder.AddConfiguration(configurationRoot.GetSection("Logging"));
 #if DEBUG
             loggingBuilder.AddDebug();
@@ -58,7 +58,7 @@ public partial class App
 
     private static void ConfigureConfiguration(IConfigurationBuilder configurationBuilder)
     {
-        // https://github.com/dotnet/runtime/blob/v8.0.8/src/libraries/Microsoft.Extensions.Hosting/src/HostingHostBuilderExtensions.cs#L236-L271
+        // https://github.com/dotnet/runtime/blob/v8.0.8/src/libraries/Microsoft.Extensions.Hosting/src/HostingHostBuilderExtensions.cs#L241-L259
 #if DEBUG
         string environmentName = Environments.Development;
 #else
