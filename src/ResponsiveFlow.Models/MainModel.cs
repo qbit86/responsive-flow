@@ -9,26 +9,20 @@ namespace ResponsiveFlow;
 public sealed partial class MainModel
 {
     private readonly ILogger _logger;
-    private readonly ProjectDto _projectDto;
+    private readonly ProjectRunner _projectRunner;
 
-    public MainModel(IOptions<ProjectDto> projectDto, ILogger<MainModel> logger)
+    public MainModel(IOptions<ProjectDto> projectDto, ILoggerFactory loggerFactory)
     {
         ArgumentNullException.ThrowIfNull(projectDto);
-        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(loggerFactory);
 
-        _projectDto = projectDto.Value;
-        _logger = logger;
+        _projectRunner = ProjectRunner.Create(projectDto.Value, loggerFactory);
+        _logger = loggerFactory.CreateLogger<MainModel>();
     }
 
-    public async Task RunAsync(CancellationToken cancellationToken)
+    public Task<Report> RunAsync(CancellationToken cancellationToken)
     {
-        for (int i = 0; !cancellationToken.IsCancellationRequested; ++i)
-        {
-            await Task.Delay(5000, cancellationToken).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
-            LogIteration(i);
-        }
+        LogOutputDirectory(_projectRunner.OutputDirectory);
+        return _projectRunner.RunAsync(cancellationToken);
     }
-
-    [LoggerMessage(EventId = 1, Level = LogLevel.Debug, Message = $"[{nameof(RunAsync)}] {{index}}")]
-    private partial void LogIteration(int index);
 }
