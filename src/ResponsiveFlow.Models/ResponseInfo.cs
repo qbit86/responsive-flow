@@ -4,9 +4,10 @@ using System.Threading.Tasks;
 
 namespace ResponsiveFlow;
 
-public readonly record struct ResponseInfo(
+public sealed record ResponseInfo(
     int UriIndex,
     Uri Uri,
     int AttemptIndex,
-    Task<HttpResponseMessage> Future,
-    long StartingTimestamp);
+    long StartingTimestamp,
+    Task<long> EndingTimestampFuture,
+    Task<HttpResponseMessage> ResponseFuture);

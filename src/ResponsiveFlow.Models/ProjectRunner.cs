@@ -114,7 +114,8 @@ internal sealed partial class ProjectRunner
 
     private async ValueTask ConsumeBodyAsync(ResponseInfo responseInfo, CancellationToken cancellationToken)
     {
-        _ = await responseInfo.Future.ConfigureAwait(false);
+        _ = await responseInfo.ResponseFuture.ConfigureAwait(false);
+        _ = await responseInfo.EndingTimestampFuture.ConfigureAwait(false);
         _completedResponses.Add(responseInfo);
     }
 
@@ -124,9 +125,26 @@ internal sealed partial class ProjectRunner
             return ValueTask.CompletedTask;
         (int uriIndex, var uri, int attemptIndex) = attempt;
         long startingTimestamp = Stopwatch.GetTimestamp();
-        var future = _httpClient.GetAsync(uri, HttpCompletionOption.ResponseContentRead, cancellationToken);
-        ResponseInfo responseInfo = new(uriIndex, uri, attemptIndex, future, startingTimestamp);
+        TaskCompletionSource<long> endingTimestampPromise = new();
+        var responseFuture = GetAsync(uri, endingTimestampPromise, cancellationToken);
+        ResponseInfo responseInfo = new(
+            uriIndex, uri, attemptIndex, startingTimestamp, endingTimestampPromise.Task, responseFuture);
         return ResponseChannelWriter.WriteAsync(responseInfo, cancellationToken);
+    }
+
+    private async Task<HttpResponseMessage> GetAsync(
+        Uri uri, TaskCompletionSource<long> endingTimestampPromise, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var responseFuture = _httpClient.GetAsync(
+                uri, HttpCompletionOption.ResponseContentRead, cancellationToken);
+            return await responseFuture.ConfigureAwait(false);
+        }
+        finally
+        {
+            endingTimestampPromise.SetResult(Stopwatch.GetTimestamp());
+        }
     }
 
     private static string GetOutputDirectoryOrFallback(ProjectDto projectDto, DateTime startTime)
