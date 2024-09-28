@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 namespace ResponsiveFlow;
 
 public readonly record struct ResponseInfo(
-    int Index,
+    int UriIndex,
     Uri Uri,
+    int AttemptIndex,
     Task<HttpResponseMessage> Future);

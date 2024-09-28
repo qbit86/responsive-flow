@@ -11,6 +11,8 @@ using Microsoft.Extensions.Logging;
 
 namespace ResponsiveFlow;
 
+internal readonly record struct Attempt(int UriIndex, Uri Uri, int AttemptIndex);
+
 internal sealed partial class ProjectRunner
 {
     private const int ResponseChannelCapacity = 32;
@@ -96,16 +98,16 @@ internal sealed partial class ProjectRunner
 
     private async Task ProduceAllAsync(CancellationToken cancellationToken)
     {
-        for (int i = 0; i < _uris.Count && !cancellationToken.IsCancellationRequested; ++i)
+        for (int uriIndex = 0; uriIndex < _uris.Count && !cancellationToken.IsCancellationRequested; ++uriIndex)
         {
-            var uri = _uris[i];
-            LogProcessingUrl(uri.AbsoluteUri, i, _uris.Count);
-            var uriWorkItems = Enumerable.Repeat(uri, RequestCount);
-            int index = i;
-            var producingTask = Parallel.ForEachAsync(
-                uriWorkItems, cancellationToken, (u, c) => ProduceBodyAsync(index, u, c));
+            var uri = _uris[uriIndex];
+            int uriIndexCopy = uriIndex;
+            LogProcessingUrl(uri.AbsoluteUri, uriIndexCopy, _uris.Count);
+            var attempts = Enumerable.Repeat(uri, RequestCount)
+                .Select((u, attemptIndex) => new Attempt(uriIndexCopy, u, attemptIndex));
+            var producingTask = Parallel.ForEachAsync(attempts, cancellationToken, ProduceBodyAsync);
             await producingTask.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
-            LogProcessedUrl(uri.AbsoluteUri, i, _uris.Count);
+            LogProcessedUrl(uri.AbsoluteUri, uriIndexCopy, _uris.Count);
         }
     }
 
@@ -115,12 +117,13 @@ internal sealed partial class ProjectRunner
         _completedResponses.Add(responseInfo);
     }
 
-    private ValueTask ProduceBodyAsync(int index, Uri uri, CancellationToken cancellationToken)
+    private ValueTask ProduceBodyAsync(Attempt attempt, CancellationToken cancellationToken)
     {
         if (cancellationToken.IsCancellationRequested)
             return ValueTask.CompletedTask;
+        (int uriIndex, var uri, int attemptIndex) = attempt;
         var future = _httpClient.GetAsync(uri, HttpCompletionOption.ResponseContentRead, cancellationToken);
-        ResponseInfo responseInfo = new(index, uri, future);
+        ResponseInfo responseInfo = new(uriIndex, uri, attemptIndex, future);
         return ResponseChannelWriter.WriteAsync(responseInfo, cancellationToken);
     }
 
