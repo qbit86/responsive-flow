@@ -46,10 +46,9 @@ internal sealed partial class ProjectRunner
 
     private static string GetOutputDirectoryOrFallback(ProjectDto projectDto, DateTime startTime)
     {
-        if (projectDto.TryGetOutputDir(out string? outputDirectory))
-            return outputDirectory;
-
-        string basename = $"{startTime:dd_HH-mm-ss}";
+        string basename = $"{startTime.DayOfYear}_{startTime:HH-mm-ss}";
+        if (projectDto.TryGetOutputDir(out string? outputRoot))
+            return Path.Join(outputRoot, basename);
         return Path.Join(
             Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), nameof(ResponsiveFlow), basename);
     }
