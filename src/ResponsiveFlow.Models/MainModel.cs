@@ -22,9 +22,17 @@ public sealed partial class MainModel
         _logger = loggerFactory.CreateLogger<MainModel>();
     }
 
-    public Task<Report> RunAsync(CancellationToken cancellationToken)
+    public async Task<Report> RunAsync(CancellationToken cancellationToken)
     {
-        LogOutputDirectory(_projectRunner.OutputDirectory);
-        return _projectRunner.RunAsync(cancellationToken);
+        LogProcessingProject(_projectRunner.OutputDirectory);
+        var reportFuture = _projectRunner.RunAsync(cancellationToken);
+        try
+        {
+            return await reportFuture.ConfigureAwait(false);
+        }
+        finally
+        {
+            LogProcessedProject(_projectRunner.OutputDirectory);
+        }
     }
 }

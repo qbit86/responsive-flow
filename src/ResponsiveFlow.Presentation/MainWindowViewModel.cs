@@ -15,7 +15,7 @@ public sealed partial class MainWindowViewModel
         ArgumentNullException.ThrowIfNull(model);
 
         _model = model;
-        _runCommand = new AsyncRelayCommand(ExecuteRunAsync);
+        _runCommand = new AsyncRelayCommand(ExecuteRunAsync, CanExecuteRun);
     }
 
     public IAsyncRelayCommand RunCommand => _runCommand;
@@ -30,6 +30,8 @@ public sealed partial class MainWindowViewModel
         // TODO: Start the loop of polling the channel for results and updating the UI.
         return reportFuture;
     }
+
+    private bool CanExecuteRun() => _runCommand.ExecutionTask is null;
 
     private static string CreateTitle() =>
         TryGetVersion(out string? version) ? $"{nameof(ResponsiveFlow)} v{version}" : nameof(ResponsiveFlow);

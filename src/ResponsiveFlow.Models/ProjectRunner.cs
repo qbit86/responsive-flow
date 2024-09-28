@@ -70,8 +70,17 @@ internal sealed partial class ProjectRunner
         await using (cancellationTokenRegistration.ConfigureAwait(false))
         {
             var consumingTask = ConsumeAllAsync(cancellationToken);
-            var producingTask = ProduceAllAsync(cancellationToken);
-            await producingTask.ConfigureAwait(false);
+
+            try
+            {
+                var producingTask = ProduceAllAsync(cancellationToken);
+                await producingTask.ConfigureAwait(false);
+            }
+            finally
+            {
+                _ = ResponseChannelWriter.TryComplete();
+            }
+
             await consumingTask.ConfigureAwait(false);
 
             return new();
@@ -90,12 +99,13 @@ internal sealed partial class ProjectRunner
         for (int i = 0; i < _uris.Count && !cancellationToken.IsCancellationRequested; ++i)
         {
             var uri = _uris[i];
-            LogProcessUrl(uri.AbsoluteUri, i, _uris.Count);
+            LogProcessingUrl(uri.AbsoluteUri, i, _uris.Count);
             var uriWorkItems = Enumerable.Repeat(uri, RequestCount);
             int index = i;
             var producingTask = Parallel.ForEachAsync(
                 uriWorkItems, cancellationToken, (u, c) => ProduceBodyAsync(index, u, c));
             await producingTask.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+            LogProcessedUrl(uri.AbsoluteUri, i, _uris.Count);
         }
     }
 
