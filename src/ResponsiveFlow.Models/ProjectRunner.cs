@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -15,6 +16,7 @@ internal sealed partial class ProjectRunner
     private const int ResponseChannelCapacity = 32;
     private const int RequestCount = 100;
 
+    private readonly ConcurrentBag<ResponseInfo> _completedResponses = [];
     private readonly HttpClient _httpClient;
     private readonly ILogger _logger;
     private readonly Channel<ResponseInfo> _responseChannel;
@@ -34,9 +36,9 @@ internal sealed partial class ProjectRunner
         _logger = logger;
     }
 
-    internal IReadOnlyList<Uri> Uris => _uris;
-
     internal string OutputDirectory { get; }
+
+    private ChannelReader<ResponseInfo> ResponseChannelReader => _responseChannel.Reader;
 
     private ChannelWriter<ResponseInfo> ResponseChannelWriter => _responseChannel.Writer;
 
@@ -54,27 +56,56 @@ internal sealed partial class ProjectRunner
         return new(validUris, effectiveOutputDirectory, httpClient, responseChannel, logger);
     }
 
-    internal async Task<Report> RunAsync(CancellationToken cancellationToken)
+    internal Task<Report> RunAsync(CancellationToken cancellationToken)
+    {
+        if (ResponseChannelReader.Completion.IsCompleted)
+            throw new InvalidOperationException("The response channel is already completed.");
+
+        return RunCoreAsync(cancellationToken);
+    }
+
+    private async Task<Report> RunCoreAsync(CancellationToken cancellationToken)
     {
         var cancellationTokenRegistration = cancellationToken.Register(() => _ = ResponseChannelWriter.TryComplete());
         await using (cancellationTokenRegistration.ConfigureAwait(false))
         {
-            for (int i = 0; i < _uris.Count && !cancellationToken.IsCancellationRequested; ++i)
-            {
-                var uri = _uris[i];
-                LogProcessUrl(uri.AbsoluteUri, i, _uris.Count);
-                var uriWorkItems = Enumerable.Repeat(uri, RequestCount);
-                int index = i;
-                var producingTask = Parallel.ForEachAsync(
-                    uriWorkItems, cancellationToken, (u, c) => ProduceAsync(index, u, c));
-                await producingTask.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
-            }
-        }
+            var consumingTask = ConsumeAllAsync(cancellationToken);
+            var producingTask = ProduceAllAsync(cancellationToken);
+            await producingTask.ConfigureAwait(false);
+            await consumingTask.ConfigureAwait(false);
 
-        return new();
+            return new();
+        }
     }
 
-    private ValueTask ProduceAsync(int index, Uri uri, CancellationToken cancellationToken)
+    private async Task ConsumeAllAsync(CancellationToken cancellationToken)
+    {
+        var responseInfoAsyncCollection = ResponseChannelReader.ReadAllAsync(cancellationToken);
+        var consumingTask = Parallel.ForEachAsync(responseInfoAsyncCollection, cancellationToken, ConsumeBodyAsync);
+        await consumingTask.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+    }
+
+    private async Task ProduceAllAsync(CancellationToken cancellationToken)
+    {
+        for (int i = 0; i < _uris.Count && !cancellationToken.IsCancellationRequested; ++i)
+        {
+            var uri = _uris[i];
+            LogProcessUrl(uri.AbsoluteUri, i, _uris.Count);
+            var uriWorkItems = Enumerable.Repeat(uri, RequestCount);
+            int index = i;
+            var producingTask = Parallel.ForEachAsync(
+                uriWorkItems, cancellationToken, (u, c) => ProduceBodyAsync(index, u, c));
+            await producingTask.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+        }
+    }
+
+    private async ValueTask ConsumeBodyAsync(ResponseInfo responseInfo, CancellationToken cancellationToken)
+    {
+        _ = await responseInfo.Future.ConfigureAwait(false);
+        _completedResponses.Add(responseInfo);
+    }
+
+    private ValueTask ProduceBodyAsync(int index, Uri uri, CancellationToken cancellationToken)
     {
         if (cancellationToken.IsCancellationRequested)
             return ValueTask.CompletedTask;
