@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -85,7 +86,7 @@ internal sealed partial class ProjectRunner
 
             await consumingTask.ConfigureAwait(false);
 
-            return new();
+            return new(_completedResponses);
         }
     }
 
@@ -122,8 +123,9 @@ internal sealed partial class ProjectRunner
         if (cancellationToken.IsCancellationRequested)
             return ValueTask.CompletedTask;
         (int uriIndex, var uri, int attemptIndex) = attempt;
+        long startingTimestamp = Stopwatch.GetTimestamp();
         var future = _httpClient.GetAsync(uri, HttpCompletionOption.ResponseContentRead, cancellationToken);
-        ResponseInfo responseInfo = new(uriIndex, uri, attemptIndex, future);
+        ResponseInfo responseInfo = new(uriIndex, uri, attemptIndex, future, startingTimestamp);
         return ResponseChannelWriter.WriteAsync(responseInfo, cancellationToken);
     }
 

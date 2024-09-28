@@ -8,4 +8,5 @@ public readonly record struct ResponseInfo(
     int UriIndex,
     Uri Uri,
     int AttemptIndex,
-    Task<HttpResponseMessage> Future);
+    Task<HttpResponseMessage> Future,
+    long StartingTimestamp);
