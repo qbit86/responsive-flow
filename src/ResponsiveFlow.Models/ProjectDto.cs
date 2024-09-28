@@ -4,9 +4,9 @@ namespace ResponsiveFlow;
 
 public sealed class ProjectDto
 {
-    public string[]? Urls { get; set; }
+    public string[]? Urls { get; init; }
 
-    public string? OutputDir { get; set; }
+    public string? OutputDir { get; init; }
 
     internal string[] GetUrlsOrEmpty() => Urls ?? [];
 
