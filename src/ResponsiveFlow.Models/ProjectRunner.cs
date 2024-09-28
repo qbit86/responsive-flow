@@ -62,7 +62,7 @@ internal sealed partial class ProjectRunner
     internal Task<Report> RunAsync(CancellationToken cancellationToken)
     {
         if (ResponseChannelReader.Completion.IsCompleted)
-            throw new InvalidOperationException("The response channel is already completed.");
+            ThrowHelpers.ThrowInvalidOperationException("The response channel is already completed.");
 
         return RunCoreAsync(cancellationToken);
     }
