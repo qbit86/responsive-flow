@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
+    <JsonSerializerIsReflectionEnabledByDefault>false</JsonSerializerIsReflectionEnabledByDefault>
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
 

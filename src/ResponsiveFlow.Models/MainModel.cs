@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Globalization;
+using System.IO;
 using System.Net.Http;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -53,6 +56,19 @@ public sealed partial class MainModel
                 await task.ConfigureAwait(false);
             }
 
+            _ = Directory.CreateDirectory(_projectRunner.OutputDirectory);
+            string path = Path.Join(_projectRunner.OutputDirectory, "report.json");
+            Stream fileStream = File.OpenWrite(path);
+            await using (fileStream)
+            {
+                var serializerTask = JsonSerializer.SerializeAsync(fileStream, projectReport,
+                    ProjectReportJsonSerializerContext.Default.ProjectReportDto, cancellationToken);
+                await serializerTask.ConfigureAwait(false);
+                var task = _messageChannel.Writer.WriteAsync(
+                    InAppMessage.FromMessage($"Saved report to '{path}'", LogLevel.Debug), cancellationToken);
+                await task.ConfigureAwait(false);
+            }
+
             return projectReport;
         }
         finally
@@ -61,3 +77,7 @@ public sealed partial class MainModel
         }
     }
 }
+
+[JsonSourceGenerationOptions(WriteIndented = true)]
+[JsonSerializable(typeof(ProjectReportDto))]
+internal sealed partial class ProjectReportJsonSerializerContext : JsonSerializerContext;
