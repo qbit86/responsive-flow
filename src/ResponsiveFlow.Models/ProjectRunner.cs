@@ -19,6 +19,7 @@ internal sealed partial class ProjectRunner
     private const int RequestCount = 100;
     private readonly HttpClient _httpClient;
     private readonly ILogger _logger;
+    private readonly ChannelWriter<InAppMessage> _messageChannelWriter;
     private readonly Channel<RequestCollectedData> _requestChannel;
     private readonly UriCollectedData[] _uriCollectedDataset;
     private readonly List<Uri> _uris;
@@ -28,6 +29,7 @@ internal sealed partial class ProjectRunner
         string outputDirectory,
         HttpClient httpClient,
         Channel<RequestCollectedData> requestChannel,
+        ChannelWriter<InAppMessage> messageChannelWriter,
         UriCollectedData[] uriCollectedDataset,
         ILogger logger)
     {
@@ -35,6 +37,7 @@ internal sealed partial class ProjectRunner
         OutputDirectory = outputDirectory;
         _httpClient = httpClient;
         _requestChannel = requestChannel;
+        _messageChannelWriter = messageChannelWriter;
         _uriCollectedDataset = uriCollectedDataset;
         _logger = logger;
     }
@@ -45,10 +48,15 @@ internal sealed partial class ProjectRunner
 
     private ChannelWriter<RequestCollectedData> RequestChannelWriter => _requestChannel.Writer;
 
-    internal static ProjectRunner Create(ProjectDto projectDto, HttpClient httpClient, ILoggerFactory loggerFactory)
+    internal static ProjectRunner Create(
+        ProjectDto projectDto,
+        HttpClient httpClient,
+        ChannelWriter<InAppMessage> messageChannelWriter,
+        ILoggerFactory loggerFactory)
     {
         ArgumentNullException.ThrowIfNull(projectDto);
         ArgumentNullException.ThrowIfNull(httpClient);
+        ArgumentNullException.ThrowIfNull(messageChannelWriter);
         ArgumentNullException.ThrowIfNull(loggerFactory);
 
         var validUris = GetValidUris(projectDto);
@@ -58,7 +66,8 @@ internal sealed partial class ProjectRunner
         var uriCollectedDataset = validUris.Select((uri, uriIndex) => new UriCollectedData(uriIndex, uri, []))
             .ToArray();
         var logger = loggerFactory.CreateLogger<ProjectRunner>();
-        return new(validUris, effectiveOutputDirectory, httpClient, requestChannel, uriCollectedDataset, logger);
+        return new(validUris, effectiveOutputDirectory, httpClient,
+            requestChannel, messageChannelWriter, uriCollectedDataset, logger);
     }
 
     internal Task<ProjectCollectedData> RunAsync(CancellationToken cancellationToken)
