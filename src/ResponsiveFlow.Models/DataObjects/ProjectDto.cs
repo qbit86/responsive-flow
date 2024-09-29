@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Text;
 
 namespace ResponsiveFlow;
 
@@ -14,5 +15,24 @@ public sealed class ProjectDto
     {
         outputDir = OutputDir;
         return !string.IsNullOrWhiteSpace(outputDir);
+    }
+
+    public override string ToString()
+    {
+        StringBuilder builder = new();
+        builder.Append(nameof(ProjectDto));
+        builder.Append(" { ");
+        if (PrintMembers(builder))
+            builder.Append(' ');
+        builder.Append('}');
+        return builder.ToString();
+    }
+
+    private bool PrintMembers(StringBuilder builder)
+    {
+        builder.Append("Urls.Count = ").Append(Urls?.Length ?? 0);
+        if (OutputDir is { } outputDir)
+            builder.Append(", OutputDir = ").Append(outputDir);
+        return true;
     }
 }

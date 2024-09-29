@@ -48,7 +48,7 @@ public sealed class Statistics
     public override string ToString()
     {
         StringBuilder builder = new();
-        builder.Append(nameof(RequestCollectedData));
+        builder.Append(nameof(Statistics));
         builder.Append(" { ");
         if (PrintMembers(builder))
             builder.Append(' ');
