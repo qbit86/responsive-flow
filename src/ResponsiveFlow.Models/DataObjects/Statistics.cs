@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 
@@ -15,6 +16,8 @@ public sealed class Statistics
         StandardDeviation = standardDeviation;
         StandardError = standardError;
     }
+
+    private static CultureInfo P => CultureInfo.InvariantCulture;
 
     public double Count { get; }
 
@@ -58,9 +61,10 @@ public sealed class Statistics
 
     private bool PrintMembers(StringBuilder builder)
     {
-        builder.Append("Mean = ").Append(Mean);
-        builder.Append(", StdDev = ").Append(StandardDeviation);
-        builder.Append(", Error = ").Append(StandardError);
+        builder.Append("Mean = ").Append(P, $"{Mean:F2}");
+        builder.Append(", StdDev = ").Append(P, $"{StandardDeviation:F2}");
+        builder.Append(", Error = ").Append(P, $"{StandardError:F2}");
+        builder.Append(", Count = ").Append(Count);
         return true;
     }
 }
