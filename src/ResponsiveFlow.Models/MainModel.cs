@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net.Http;
+using System.Text;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -27,14 +28,25 @@ public sealed partial class MainModel
 
     public ChannelReader<InAppMessage> MessageChannelReader => _messageChannel.Reader;
 
-    public async Task<ProjectCollectedData> RunAsync(CancellationToken cancellationToken)
+    public async Task<ProjectReportDto> RunAsync(CancellationToken cancellationToken)
     {
         LogProcessingProject(_projectRunner.OutputDirectory);
         var collectedDataFuture = _projectRunner.RunAsync(cancellationToken);
         try
         {
             var projectCollectedData = await collectedDataFuture.ConfigureAwait(false);
-            return projectCollectedData;
+            var projectReport = ProjectReportDto.Create(projectCollectedData);
+            StringBuilder builder = new();
+            foreach (var uriReport in projectReport.UriReports)
+            {
+                builder.Clear();
+                builder.Append(uriReport);
+                var task = _messageChannel.Writer.WriteAsync(
+                    InAppMessage.FromMessage(builder.ToString()), cancellationToken);
+                await task.ConfigureAwait(false);
+            }
+
+            return projectReport;
         }
         finally
         {
