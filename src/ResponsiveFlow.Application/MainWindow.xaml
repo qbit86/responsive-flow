@@ -20,13 +20,14 @@
             IsIndeterminate="True"
             Margin="8 0 8 8" />
         <ListView
+            HorizontalContentAlignment="Stretch"
             Margin="8 0 8 8"
             ItemsSource="{Binding Messages, Mode=OneTime}">
             <ListView.ItemTemplate>
                 <DataTemplate x:Name="MessageDataTemplate" d:DataContext="{rfp:InAppMessageViewModel}">
-                    <TextBlock
-                        Background="{Binding BackgroundBrush, Mode=OneTime}"
-                        Text="{Binding Text, Mode=OneTime}" />
+                    <Border Background="{Binding BackgroundBrush, Mode=OneTime}" >
+                        <TextBlock Text="{Binding Text, Mode=OneTime}" />
+                    </Border>
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>
