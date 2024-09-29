@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -17,6 +18,12 @@ internal sealed partial class ProjectRunner
 {
     private const int RequestChannelCapacity = 32;
     private const int RequestCount = 100;
+
+    /// <remarks>
+    /// Minor implementation detail intended to filter duplicate messages from the channel.
+    /// </remarks>
+    private readonly ConcurrentDictionary<Exception, bool>[] _exceptionsWritten;
+
     private readonly HttpClient _httpClient;
     private readonly ILogger _logger;
     private readonly ChannelWriter<InAppMessage> _messageChannelWriter;
@@ -31,6 +38,7 @@ internal sealed partial class ProjectRunner
         Channel<RequestCollectedData> requestChannel,
         ChannelWriter<InAppMessage> messageChannelWriter,
         UriCollectedData[] uriCollectedDataset,
+        ConcurrentDictionary<Exception, bool>[] exceptionsWritten,
         ILogger logger)
     {
         _uris = uris;
@@ -39,6 +47,7 @@ internal sealed partial class ProjectRunner
         _requestChannel = requestChannel;
         _messageChannelWriter = messageChannelWriter;
         _uriCollectedDataset = uriCollectedDataset;
+        _exceptionsWritten = exceptionsWritten;
         _logger = logger;
     }
 
@@ -65,9 +74,11 @@ internal sealed partial class ProjectRunner
         var requestChannel = Channel.CreateBounded<RequestCollectedData>(RequestChannelCapacity);
         var uriCollectedDataset = validUris.Select((uri, uriIndex) => new UriCollectedData(uriIndex, uri, []))
             .ToArray();
+        var exceptionsWritten = Enumerable.Range(0, uriCollectedDataset.Length)
+            .Select(_ => new ConcurrentDictionary<Exception, bool>(ExceptionComparer.Instance)).ToArray();
         var logger = loggerFactory.CreateLogger<ProjectRunner>();
         return new(validUris, effectiveOutputDirectory, httpClient,
-            requestChannel, messageChannelWriter, uriCollectedDataset, logger);
+            requestChannel, messageChannelWriter, uriCollectedDataset, exceptionsWritten, logger);
     }
 
     internal Task<ProjectCollectedData> RunAsync(CancellationToken cancellationToken)
@@ -75,10 +86,10 @@ internal sealed partial class ProjectRunner
         if (RequestChannelReader.Completion.IsCompleted)
             ThrowHelpers.ThrowInvalidOperationException("The request channel is already completed.");
 
-        return RunCoreAsync(cancellationToken);
+        return RunUncheckedAsync(cancellationToken);
     }
 
-    private async Task<ProjectCollectedData> RunCoreAsync(CancellationToken cancellationToken)
+    private async Task<ProjectCollectedData> RunUncheckedAsync(CancellationToken cancellationToken)
     {
         var cancellationTokenRegistration = cancellationToken.Register(() => _ = RequestChannelWriter.TryComplete());
         await using (cancellationTokenRegistration.ConfigureAwait(false))
@@ -145,9 +156,12 @@ internal sealed partial class ProjectRunner
         requests.Add(requestCollectedData);
         if (requestCollectedData.ResponseFuture.Exception is { } exception)
         {
+            var exceptionsWritten = _exceptionsWritten[requestCollectedData.UriIndex];
             var innerExceptions = exception.Flatten().InnerExceptions;
             foreach (var innerException in innerExceptions)
             {
+                if (!exceptionsWritten.TryAdd(innerException, true))
+                    continue;
                 var writeTask =
                     _messageChannelWriter.WriteAsync(InAppMessage.FromException(innerException), cancellationToken);
                 await writeTask.ConfigureAwait(false);
