@@ -22,13 +22,14 @@ public sealed partial class MainModel
         _logger = loggerFactory.CreateLogger<MainModel>();
     }
 
-    public async Task<Report> RunAsync(CancellationToken cancellationToken)
+    public async Task<ProjectCollectedData> RunAsync(CancellationToken cancellationToken)
     {
         LogProcessingProject(_projectRunner.OutputDirectory);
-        var reportFuture = _projectRunner.RunAsync(cancellationToken);
+        var collectedDataFuture = _projectRunner.RunAsync(cancellationToken);
         try
         {
-            return await reportFuture.ConfigureAwait(false);
+            var projectCollectedData = await collectedDataFuture.ConfigureAwait(false);
+            return projectCollectedData;
         }
         finally
         {

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -16,34 +15,35 @@ internal readonly record struct Attempt(int UriIndex, Uri Uri, int AttemptIndex)
 
 internal sealed partial class ProjectRunner
 {
-    private const int ResponseChannelCapacity = 32;
+    private const int RequestChannelCapacity = 32;
     private const int RequestCount = 100;
-
-    private readonly ConcurrentBag<ResponseInfo> _completedResponses = [];
     private readonly HttpClient _httpClient;
     private readonly ILogger _logger;
-    private readonly Channel<ResponseInfo> _responseChannel;
+    private readonly Channel<RequestCollectedData> _requestChannel;
+    private readonly UriCollectedData[] _uriCollectedDataset;
     private readonly List<Uri> _uris;
 
     private ProjectRunner(
         List<Uri> uris,
         string outputDirectory,
         HttpClient httpClient,
-        Channel<ResponseInfo> responseChannel,
+        Channel<RequestCollectedData> requestChannel,
+        UriCollectedData[] uriCollectedDataset,
         ILogger logger)
     {
         _uris = uris;
         OutputDirectory = outputDirectory;
         _httpClient = httpClient;
-        _responseChannel = responseChannel;
+        _requestChannel = requestChannel;
+        _uriCollectedDataset = uriCollectedDataset;
         _logger = logger;
     }
 
     internal string OutputDirectory { get; }
 
-    private ChannelReader<ResponseInfo> ResponseChannelReader => _responseChannel.Reader;
+    private ChannelReader<RequestCollectedData> RequestChannelReader => _requestChannel.Reader;
 
-    private ChannelWriter<ResponseInfo> ResponseChannelWriter => _responseChannel.Writer;
+    private ChannelWriter<RequestCollectedData> RequestChannelWriter => _requestChannel.Writer;
 
     internal static ProjectRunner Create(ProjectDto projectDto, HttpClient httpClient, ILoggerFactory loggerFactory)
     {
@@ -54,22 +54,24 @@ internal sealed partial class ProjectRunner
         var validUris = GetValidUris(projectDto);
         var startTime = DateTime.Now;
         string effectiveOutputDirectory = GetOutputDirectoryOrFallback(projectDto, startTime);
-        var responseChannel = Channel.CreateBounded<ResponseInfo>(ResponseChannelCapacity);
+        var requestChannel = Channel.CreateBounded<RequestCollectedData>(RequestChannelCapacity);
+        var uriCollectedDataset = validUris.Select((uri, uriIndex) => new UriCollectedData(uriIndex, uri, []))
+            .ToArray();
         var logger = loggerFactory.CreateLogger<ProjectRunner>();
-        return new(validUris, effectiveOutputDirectory, httpClient, responseChannel, logger);
+        return new(validUris, effectiveOutputDirectory, httpClient, requestChannel, uriCollectedDataset, logger);
     }
 
-    internal Task<Report> RunAsync(CancellationToken cancellationToken)
+    internal Task<ProjectCollectedData> RunAsync(CancellationToken cancellationToken)
     {
-        if (ResponseChannelReader.Completion.IsCompleted)
-            ThrowHelpers.ThrowInvalidOperationException("The response channel is already completed.");
+        if (RequestChannelReader.Completion.IsCompleted)
+            ThrowHelpers.ThrowInvalidOperationException("The request channel is already completed.");
 
         return RunCoreAsync(cancellationToken);
     }
 
-    private async Task<Report> RunCoreAsync(CancellationToken cancellationToken)
+    private async Task<ProjectCollectedData> RunCoreAsync(CancellationToken cancellationToken)
     {
-        var cancellationTokenRegistration = cancellationToken.Register(() => _ = ResponseChannelWriter.TryComplete());
+        var cancellationTokenRegistration = cancellationToken.Register(() => _ = RequestChannelWriter.TryComplete());
         await using (cancellationTokenRegistration.ConfigureAwait(false))
         {
             var consumingTask = ConsumeAllAsync(cancellationToken);
@@ -81,20 +83,24 @@ internal sealed partial class ProjectRunner
             }
             finally
             {
-                _ = ResponseChannelWriter.TryComplete();
+                _ = RequestChannelWriter.TryComplete();
             }
 
             await consumingTask.ConfigureAwait(false);
 
-            return new(_completedResponses);
+            return new(_uriCollectedDataset);
         }
     }
 
     private async Task ConsumeAllAsync(CancellationToken cancellationToken)
     {
-        var responseInfoAsyncCollection = ResponseChannelReader.ReadAllAsync(cancellationToken);
-        var consumingTask = Parallel.ForEachAsync(responseInfoAsyncCollection, cancellationToken, ConsumeBodyAsync);
-        await consumingTask.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+        var requestAsyncCollection = RequestChannelReader.ReadAllAsync(cancellationToken);
+        var consumingTask = Parallel.ForEachAsync(requestAsyncCollection, cancellationToken, ConsumeBodyAsync);
+        try
+        {
+            await consumingTask.ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) { }
     }
 
     private async Task ProduceAllAsync(CancellationToken cancellationToken)
@@ -107,16 +113,25 @@ internal sealed partial class ProjectRunner
             var attempts = Enumerable.Repeat(uri, RequestCount)
                 .Select((u, attemptIndex) => new Attempt(uriIndexCopy, u, attemptIndex));
             var producingTask = Parallel.ForEachAsync(attempts, cancellationToken, ProduceBodyAsync);
-            await producingTask.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
-            LogProcessedUrl(uri.AbsoluteUri, uriIndexCopy, _uris.Count);
+            try
+            {
+                await producingTask.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) { }
+            finally
+            {
+                LogProcessedUrl(uri.AbsoluteUri, uriIndexCopy, _uris.Count);
+            }
         }
     }
 
-    private async ValueTask ConsumeBodyAsync(ResponseInfo responseInfo, CancellationToken cancellationToken)
+    private async ValueTask ConsumeBodyAsync(
+        RequestCollectedData requestCollectedData, CancellationToken cancellationToken)
     {
-        _ = await responseInfo.ResponseFuture.ConfigureAwait(false);
-        _ = await responseInfo.EndingTimestampFuture.ConfigureAwait(false);
-        _completedResponses.Add(responseInfo);
+        _ = await requestCollectedData.ResponseFuture.ConfigureAwait(false);
+        _ = await requestCollectedData.EndingTimestampFuture.ConfigureAwait(false);
+        var requests = _uriCollectedDataset[requestCollectedData.UriIndex].Requests;
+        requests.Add(requestCollectedData);
     }
 
     private ValueTask ProduceBodyAsync(Attempt attempt, CancellationToken cancellationToken)
@@ -127,9 +142,9 @@ internal sealed partial class ProjectRunner
         long startingTimestamp = Stopwatch.GetTimestamp();
         TaskCompletionSource<long> endingTimestampPromise = new();
         var responseFuture = GetAsync(uri, endingTimestampPromise, cancellationToken);
-        ResponseInfo responseInfo = new(
+        RequestCollectedData requestCollectedData = new(
             uriIndex, uri, attemptIndex, startingTimestamp, endingTimestampPromise.Task, responseFuture);
-        return ResponseChannelWriter.WriteAsync(responseInfo, cancellationToken);
+        return RequestChannelWriter.WriteAsync(requestCollectedData, cancellationToken);
     }
 
     private async Task<HttpResponseMessage> GetAsync(

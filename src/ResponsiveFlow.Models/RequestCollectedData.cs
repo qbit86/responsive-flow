@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace ResponsiveFlow;
 
-public sealed record ResponseInfo(
+public sealed record RequestCollectedData(
     int UriIndex,
     Uri Uri,
     int AttemptIndex,
@@ -17,7 +17,7 @@ public sealed record ResponseInfo(
     public override string ToString()
     {
         StringBuilder builder = new();
-        builder.Append(nameof(ResponseInfo));
+        builder.Append(nameof(RequestCollectedData));
         builder.Append(" { ");
         if (PrintMembers(builder))
             builder.Append(' ');
