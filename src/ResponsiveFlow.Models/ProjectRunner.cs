@@ -143,6 +143,16 @@ internal sealed partial class ProjectRunner
         await responseTask.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
         var requests = _uriCollectedDataset[requestCollectedData.UriIndex].Requests;
         requests.Add(requestCollectedData);
+        if (requestCollectedData.ResponseFuture.Exception is { } exception)
+        {
+            var innerExceptions = exception.Flatten().InnerExceptions;
+            foreach (var innerException in innerExceptions)
+            {
+                var writeTask =
+                    _messageChannelWriter.WriteAsync(InAppMessage.FromException(innerException), cancellationToken);
+                await writeTask.ConfigureAwait(false);
+            }
+        }
     }
 
     private ValueTask ProduceBodyAsync(Attempt attempt, CancellationToken cancellationToken)

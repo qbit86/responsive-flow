@@ -32,7 +32,7 @@ public sealed class InAppMessage
         return new(level, message, null);
     }
 
-    public static InAppMessage FromException(
+    public static InAppMessage FromExceptionAndMessage(
         Exception exception, string? message = null, LogLevel level = LogLevel.Error)
     {
         ArgumentNullException.ThrowIfNull(exception);
