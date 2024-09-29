@@ -9,7 +9,7 @@
         Height="500" Width="800"
         MinHeight="300" MinWidth="500"
         Title="{Binding Title, Mode=OneTime}">
-    <DockPanel LastChildFill="False">
+    <DockPanel LastChildFill="True">
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
             <Button Margin="8" MinHeight="32" MinWidth="64" Command="{Binding RunCommand}">Run</Button>
         </StackPanel>
@@ -18,6 +18,16 @@
             Height="12"
             HorizontalAlignment="Stretch"
             IsIndeterminate="True"
-            Margin="8" />
+            Margin="8 0 8 8" />
+        <ListView
+            Margin="8 0 8 8"
+            ItemsSource="{Binding Messages, Mode=OneTime}">
+            <ListView.ItemTemplate>
+                <DataTemplate x:Name="MessageDataTemplate" d:DataContext="{rfp:InAppMessageViewModel}">
+                    <TextBlock
+                        Text="{Binding Text, Mode=OneTime}" />
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
     </DockPanel>
 </Window>
