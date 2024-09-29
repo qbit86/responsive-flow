@@ -128,8 +128,10 @@ internal sealed partial class ProjectRunner
     private async ValueTask ConsumeBodyAsync(
         RequestCollectedData requestCollectedData, CancellationToken cancellationToken)
     {
-        _ = await requestCollectedData.ResponseFuture.ConfigureAwait(false);
-        _ = await requestCollectedData.EndingTimestampFuture.ConfigureAwait(false);
+        Task endingTimestampTask = requestCollectedData.EndingTimestampFuture;
+        await endingTimestampTask.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+        Task responseTask = requestCollectedData.ResponseFuture;
+        await responseTask.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
         var requests = _uriCollectedDataset[requestCollectedData.UriIndex].Requests;
         requests.Add(requestCollectedData);
     }
