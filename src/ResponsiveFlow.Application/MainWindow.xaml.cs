@@ -15,9 +15,16 @@ public partial class MainWindow
         DataContext = _viewModel = viewModel;
     }
 
+    protected override void OnContentRendered(EventArgs e)
+    {
+        base.OnContentRendered(e);
+        _viewModel.Run();
+    }
+
     protected override void OnClosing(CancelEventArgs e)
     {
         base.OnClosing(e);
-        _viewModel.CancelRun();
+        _viewModel.Shutdown();
+        _viewModel.Dispose();
     }
 }

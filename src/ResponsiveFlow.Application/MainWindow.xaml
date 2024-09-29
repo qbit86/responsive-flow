@@ -25,7 +25,7 @@
             ItemsSource="{Binding Messages, Mode=OneTime}">
             <ListView.ItemTemplate>
                 <DataTemplate x:Name="MessageDataTemplate" d:DataContext="{rfp:InAppMessageViewModel}">
-                    <Border Background="{Binding BackgroundBrush, Mode=OneTime}" >
+                    <Border Background="{Binding BackgroundBrush, Mode=OneTime}">
                         <TextBlock Text="{Binding Text, Mode=OneTime}" />
                     </Border>
                 </DataTemplate>

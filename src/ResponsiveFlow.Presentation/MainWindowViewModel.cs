@@ -7,10 +7,11 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace ResponsiveFlow;
 
-public sealed partial class MainWindowViewModel
+public sealed partial class MainWindowViewModel : IDisposable
 {
     private readonly MainModel _model;
     private readonly AsyncRelayCommand _runCommand;
+    private readonly CancellationTokenSource _stoppingCts = new();
 
     public MainWindowViewModel(MainModel model)
     {
@@ -26,17 +27,23 @@ public sealed partial class MainWindowViewModel
 
     public ObservableCollection<InAppMessageViewModel> Messages { get; } = [];
 
-    public void CancelRun() => _runCommand.Cancel();
+    public void Dispose() => _stoppingCts.Dispose();
 
-    private async Task ExecuteRunAsync(CancellationToken cancellationToken)
+    public void Run() => _ = RunUpdateLoopAsync(_stoppingCts.Token);
+
+    public void Shutdown()
     {
-        var collectedDataFuture = _model.RunAsync(cancellationToken);
+        _runCommand.Cancel();
+        _stoppingCts.Cancel();
+    }
 
+    private async Task RunUpdateLoopAsync(CancellationToken stoppingToken)
+    {
         // This loop polls the channel for in-app messages from the model
         // and updates the UI by posting the messages to an observable collection bound to the view.
-        while (!collectedDataFuture.IsCompleted && !cancellationToken.IsCancellationRequested)
+        while (!stoppingToken.IsCancellationRequested)
         {
-            var messageFuture = _model.MessageChannelReader.ReadAsync(cancellationToken);
+            var messageFuture = _model.MessageChannelReader.ReadAsync(stoppingToken);
             try
             {
                 await Dispatcher.Yield();
@@ -46,7 +53,11 @@ public sealed partial class MainWindowViewModel
             }
             catch (OperationCanceledException) { }
         }
+    }
 
+    private async Task ExecuteRunAsync(CancellationToken cancellationToken)
+    {
+        var collectedDataFuture = _model.RunAsync(cancellationToken);
         Task collectedDataTask = collectedDataFuture;
         await collectedDataTask.ConfigureAwait(
             ConfigureAwaitOptions.ContinueOnCapturedContext | ConfigureAwaitOptions.SuppressThrowing);
