@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Net.Http;
 using System.Text;
 using System.Threading;
@@ -26,6 +27,8 @@ public sealed partial class MainModel
         _logger = loggerFactory.CreateLogger<MainModel>();
     }
 
+    private static CultureInfo P => CultureInfo.InvariantCulture;
+
     public ChannelReader<InAppMessage> MessageChannelReader => _messageChannel.Reader;
 
     public async Task<ProjectReportDto> RunAsync(CancellationToken cancellationToken)
@@ -40,9 +43,13 @@ public sealed partial class MainModel
             foreach (var uriReport in projectReport.UriReports)
             {
                 builder.Clear();
-                builder.Append(uriReport);
+                builder.Append(P, $"#{uriReport.UriIndex} {uriReport.Uri}");
+                if (uriReport.Statistics is { } s)
+                    _ = s.PrintMembers(builder.AppendLine());
+
+                var level = uriReport.Statistics is null ? LogLevel.Warning : LogLevel.Information;
                 var task = _messageChannel.Writer.WriteAsync(
-                    InAppMessage.FromMessage(builder.ToString()), cancellationToken);
+                    InAppMessage.FromMessage(builder.ToString(), level), cancellationToken);
                 await task.ConfigureAwait(false);
             }
 

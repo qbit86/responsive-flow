@@ -53,13 +53,19 @@ public sealed class Statistics
         StringBuilder builder = new();
         builder.Append(nameof(Statistics));
         builder.Append(" { ");
-        if (PrintMembers(builder))
+        if (PrintMembersUnchecked(builder))
             builder.Append(' ');
         builder.Append('}');
         return builder.ToString();
     }
 
-    private bool PrintMembers(StringBuilder builder)
+    public bool PrintMembers(StringBuilder builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        return PrintMembersUnchecked(builder);
+    }
+
+    private bool PrintMembersUnchecked(StringBuilder builder)
     {
         builder.Append("Mean = ").Append(P, $"{Mean:F2}");
         builder.Append(", StdDev = ").Append(P, $"{StandardDeviation:F2}");
