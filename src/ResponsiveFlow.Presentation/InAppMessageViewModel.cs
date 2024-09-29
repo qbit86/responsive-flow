@@ -8,6 +8,8 @@ public sealed class InAppMessageViewModel
 {
     private readonly InAppMessage _inAppMessage;
 
+    public InAppMessageViewModel() : this(InAppMessage.FromMessage(string.Empty), Brushes.Transparent) { }
+
     private InAppMessageViewModel(InAppMessage inAppMessage, Brush backgroundBrush)
     {
         _inAppMessage = inAppMessage;
