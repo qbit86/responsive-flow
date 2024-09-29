@@ -1,0 +1,5 @@
+[*ViewModel.cs]
+resharper_member_can_be_private_global_highlighting = hint # MemberCanBePrivate.Global
+
+[MainWindowViewModel.cs]
+resharper_collection_never_queried_global_highlighting = hint # UnusedAutoPropertyAccessor.Global
