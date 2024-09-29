@@ -57,10 +57,18 @@ public sealed partial class MainWindowViewModel : IDisposable
 
     private async Task ExecuteRunAsync(CancellationToken cancellationToken)
     {
-        var collectedDataFuture = _model.RunAsync(cancellationToken);
-        Task collectedDataTask = collectedDataFuture;
-        await collectedDataTask.ConfigureAwait(
-            ConfigureAwaitOptions.ContinueOnCapturedContext | ConfigureAwaitOptions.SuppressThrowing);
+        try
+        {
+            var collectedDataFuture = _model.RunAsync(cancellationToken);
+            _ = await collectedDataFuture.ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception exception)
+        {
+            var message = InAppMessage.FromException(exception);
+            var messageViewModel = InAppMessageViewModel.Create(message);
+            Messages.Add(messageViewModel);
+        }
     }
 
     private bool CanExecuteRun() => _runCommand.ExecutionTask is null;

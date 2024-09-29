@@ -3,4 +3,5 @@ resharper_member_can_be_private_global_highlighting = hint # MemberCanBePrivate.
 resharper_unused_auto_property_accessor_global_highlighting = hint # UnusedAutoPropertyAccessor.Global
 
 [MainWindowViewModel.cs]
+dotnet_diagnostic.CA1031.severity = none # Do not catch general exception types
 resharper_collection_never_queried_global_highlighting = hint # CollectionNeverQueried.Global
