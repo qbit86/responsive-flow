@@ -189,7 +189,10 @@ internal sealed partial class ProjectRunner
         {
             var responseFuture = _httpClient.GetAsync(
                 uri, HttpCompletionOption.ResponseContentRead, cancellationToken);
-            return await responseFuture.ConfigureAwait(false);
+            // “Because of bugs in the BIOS or the Hardware Abstraction Layer (HAL),
+            // you can get different timing results on different processors.”
+            // — https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.stopwatch#remarks
+            return await responseFuture.ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
         }
         finally
         {
