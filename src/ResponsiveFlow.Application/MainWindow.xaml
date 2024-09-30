@@ -1,0 +1,35 @@
+﻿<Window x:Class="ResponsiveFlow.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:rfp="clr-namespace:ResponsiveFlow;assembly=ResponsiveFlow.Presentation"
+        d:DataContext="{rfp:MainWindowViewModel}"
+        mc:Ignorable="d"
+        Height="500" Width="800"
+        MinHeight="300" MinWidth="500"
+        Title="{Binding Title, Mode=OneTime}">
+    <DockPanel LastChildFill="True">
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
+            <Button Margin="8" MinHeight="32" MinWidth="64" Command="{Binding RunCommand}">Run</Button>
+        </StackPanel>
+        <ProgressBar
+            DockPanel.Dock="Bottom"
+            Height="12"
+            HorizontalAlignment="Stretch"
+            IsIndeterminate="True"
+            Margin="8 0 8 8" />
+        <ListView
+            HorizontalContentAlignment="Stretch"
+            Margin="8 0 8 8"
+            ItemsSource="{Binding Messages, Mode=OneTime}">
+            <ListView.ItemTemplate>
+                <DataTemplate x:Name="MessageDataTemplate" d:DataContext="{rfp:InAppMessageViewModel}">
+                    <Border Background="{Binding BackgroundBrush, Mode=OneTime}">
+                        <TextBlock Text="{Binding Text, Mode=OneTime}" />
+                    </Border>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+    </DockPanel>
+</Window>

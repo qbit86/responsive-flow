@@ -1,0 +1,3 @@
+[*.cs]
+dotnet_diagnostic.CA1819.severity = none # Properties should not return arrays
+resharper_unused_auto_property_accessor_global_highlighting = hint # UnusedAutoPropertyAccessor.Global
