@@ -64,10 +64,12 @@ internal sealed partial class ProjectRunner
         for (int uriIndex = 0; !cancellationToken.IsCancellationRequested && uriIndex < _uris.Count; ++uriIndex)
         {
             var uri = _uris[uriIndex];
+            LogProcessingUrl(uri, uriIndex, _uris.Count);
             var uriRunner = UriRunner.Create(uriIndex, uri, _httpClient, _messageChannelWriter);
             var uriCollectedDataFuture = uriRunner.RunAsync(cancellationToken);
             var uriCollectedData = await uriCollectedDataFuture.ConfigureAwait(false);
             uriCollectedDataset[uriIndex] = uriCollectedData;
+            LogProcessedUrl(uri, uriIndex, _uris.Count);
         }
 
         return new(uriCollectedDataset);
