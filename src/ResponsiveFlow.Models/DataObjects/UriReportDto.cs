@@ -26,9 +26,8 @@ public sealed class UriReportDto
 
         (int uriIndex, var uri, var requests) = uriCollectedData;
         var values = requests
-            .Where(it => it.EndingTimestampFuture.IsCompletedSuccessfully && it.ResponseFuture.IsCompletedSuccessfully)
-            .Select(it => Stopwatch.GetElapsedTime(
-                it.StartingTimestamp, it.EndingTimestampFuture.Result).TotalMilliseconds)
+            .Where(it => it.ResponseFuture.IsCompletedSuccessfully)
+            .Select(it => Stopwatch.GetElapsedTime(it.StartingTimestamp, it.EndingTimestamp).TotalMilliseconds)
             .ToList();
         if (values.Count is 0)
             return new(uriIndex, uri, null);

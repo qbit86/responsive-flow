@@ -81,10 +81,9 @@ internal sealed class UriRunner
                 await WriteExceptionAsync(exception).ConfigureAwait(false);
             }
 
-            // TODO: Refactor RequestCollectedData, get rid of wrapping task.
-            var endingTimestamp = Task.FromResult(Stopwatch.GetTimestamp());
-            // TODO: Report progress.
+            long endingTimestamp = Stopwatch.GetTimestamp();
 
+            // TODO: Report progress.
             return new(UriIndex, Uri, attemptIndex, startingTimestamp, endingTimestamp, responseFuture);
         }
         finally

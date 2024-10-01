@@ -11,7 +11,7 @@ public sealed record RequestCollectedData(
     Uri Uri,
     int AttemptIndex,
     long StartingTimestamp,
-    Task<long> EndingTimestampFuture,
+    long EndingTimestamp,
     Task<HttpResponseMessage> ResponseFuture)
 {
     public override string ToString()
@@ -30,16 +30,8 @@ public sealed record RequestCollectedData(
         builder.Append("UriIndex = ").Append(UriIndex);
         builder.Append(", Uri = ").Append(Uri);
         builder.Append(", AttemptIndex = ").Append(AttemptIndex);
-        if (EndingTimestampFuture.IsCompletedSuccessfully)
-        {
-            var elapsedTime = Stopwatch.GetElapsedTime(StartingTimestamp, EndingTimestampFuture.Result);
-            builder.Append(", ElapsedTime = ").Append(elapsedTime.TotalMilliseconds).Append("ms");
-        }
-        else
-        {
-            builder.Append(", StartingTimestamp = ").Append(StartingTimestamp);
-        }
-
+        var elapsedTime = Stopwatch.GetElapsedTime(StartingTimestamp, EndingTimestamp);
+        builder.Append(", ElapsedTime = ").Append(elapsedTime.TotalMilliseconds).Append("ms");
         builder.Append(", ResponseFuture.Status = ").Append(ResponseFuture.Status);
         return true;
     }
