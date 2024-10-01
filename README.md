@@ -7,6 +7,7 @@ ResponsiveFlow is a minimalist WPF application that measures the time of HTTP re
 The application accepts the _appsettings.json_ configuration file as input.
 Depending on the build configuration, _appsettings.Development.json_ or _appsettings.Production.json_ is also an option, which is convenient to override the default configuration when running from the IDE.
 See _src/ResponsiveFlow.Application/appsettings-example.json_ for a reference.
+
 ```json
 {
   "Logging": {
@@ -38,4 +39,3 @@ The Application entry point `App.Main()` serves as the composition root for sett
 The Presentation project provides the viewmodels and defines the UI logic.
 
 All the asynchronous machinery for making requests and collecting the measurements is placed in the Models project.
-The primary means of synchronization are channels and thread-safe data structures like `ConcurrentBag<T>` (no explicit locks so far!)
