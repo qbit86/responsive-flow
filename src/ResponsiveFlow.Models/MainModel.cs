@@ -15,9 +15,11 @@ namespace ResponsiveFlow;
 
 public sealed partial class MainModel
 {
+    private readonly HttpClient _httpClient;
     private readonly ILogger _logger;
+    private readonly ILoggerFactory _loggerFactory;
     private readonly Channel<InAppMessage> _messageChannel;
-    private readonly ProjectRunner _projectRunner;
+    private readonly ProjectDto _projectDto;
 
     public MainModel(IOptions<ProjectDto> projectDto, HttpClient httpClient, ILoggerFactory loggerFactory)
     {
@@ -26,8 +28,10 @@ public sealed partial class MainModel
         ArgumentNullException.ThrowIfNull(loggerFactory);
 
         _messageChannel = Channel.CreateUnbounded<InAppMessage>(new UnboundedChannelOptions { SingleReader = true });
-        _projectRunner = ProjectRunner.Create(projectDto.Value, httpClient, _messageChannel.Writer, loggerFactory);
         _logger = loggerFactory.CreateLogger<MainModel>();
+        _projectDto = projectDto.Value;
+        _httpClient = httpClient;
+        _loggerFactory = loggerFactory;
     }
 
     private static CultureInfo P => CultureInfo.InvariantCulture;
@@ -36,8 +40,9 @@ public sealed partial class MainModel
 
     public async Task<ProjectReportDto> RunAsync(CancellationToken cancellationToken)
     {
-        LogProcessingProject(_projectRunner.OutputDirectory);
-        var collectedDataFuture = _projectRunner.RunAsync(cancellationToken);
+        var projectRunner = ProjectRunner.Create(_projectDto, _httpClient, _messageChannel.Writer, _loggerFactory);
+        LogProcessingProject(projectRunner.OutputDirectory);
+        var collectedDataFuture = projectRunner.RunAsync(cancellationToken);
         try
         {
             var projectCollectedData = await collectedDataFuture.ConfigureAwait(false);
@@ -56,8 +61,8 @@ public sealed partial class MainModel
                 await task.ConfigureAwait(false);
             }
 
-            _ = Directory.CreateDirectory(_projectRunner.OutputDirectory);
-            string path = Path.Join(_projectRunner.OutputDirectory, "report.json");
+            _ = Directory.CreateDirectory(projectRunner.OutputDirectory);
+            string path = Path.Join(projectRunner.OutputDirectory, "report.json");
             Stream fileStream = File.OpenWrite(path);
             await using (fileStream)
             {
@@ -73,7 +78,7 @@ public sealed partial class MainModel
         }
         finally
         {
-            LogProcessedProject(_projectRunner.OutputDirectory);
+            LogProcessedProject(projectRunner.OutputDirectory);
         }
     }
 }
