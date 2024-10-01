@@ -152,7 +152,7 @@ internal sealed partial class ProjectRunner
         await endingTimestampTask.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
         Task responseTask = requestCollectedData.ResponseFuture;
         await responseTask.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
-        var requests = _uriCollectedDataset[requestCollectedData.UriIndex].Requests;
+        var requests = _uriCollectedDataset[requestCollectedData.UriIndex].RequestCollectedDataset;
         requests.Add(requestCollectedData);
         if (requestCollectedData.ResponseFuture.Exception is { } exception)
         {
