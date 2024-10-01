@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Text;
 
 namespace ResponsiveFlow;
@@ -7,7 +7,7 @@ namespace ResponsiveFlow;
 public sealed record UriCollectedData(
     int UriIndex,
     Uri Uri,
-    ConcurrentBag<RequestCollectedData> Requests)
+    ICollection<RequestCollectedData> RequestCollectedDataset)
 {
     public override string ToString()
     {
@@ -22,9 +22,9 @@ public sealed record UriCollectedData(
 
     private bool PrintMembers(StringBuilder builder)
     {
-        builder.Append("UriIndex = ").Append(UriIndex);
-        builder.Append(", Uri = ").Append(Uri);
-        builder.Append(", Requests.Count = ").Append(Requests.Count);
+        builder.Append($"{nameof(UriIndex)} = ").Append(UriIndex);
+        builder.Append($", {nameof(Uri)} = ").Append(Uri);
+        builder.Append($", {nameof(RequestCollectedDataset)}.Count = ").Append(RequestCollectedDataset.Count);
         return true;
     }
 }
