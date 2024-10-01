@@ -1,0 +1,2 @@
+[UriRunner.cs]
+dotnet_diagnostic.CA1031.severity = none # Do not catch general exception types
