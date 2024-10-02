@@ -11,18 +11,25 @@ namespace ResponsiveFlow;
 
 internal sealed class UriRunner
 {
-    private const int ConcurrentRequestCount = 20;
-    private const int RequestCount = 100;
+    internal const int AttemptCount = 100;
+    private const int ConcurrentAttemptCount = 20;
 
     private readonly HttpClient _httpClient;
     private readonly ChannelWriter<InAppMessage> _messageChannelWriter;
+    private readonly IProgress<UriProgressReport> _progress;
 
-    private UriRunner(int uriIndex, Uri uri, HttpClient httpClient, ChannelWriter<InAppMessage> messageChannelWriter)
+    private UriRunner(
+        int uriIndex,
+        Uri uri,
+        HttpClient httpClient,
+        ChannelWriter<InAppMessage> messageChannelWriter,
+        IProgress<UriProgressReport> progress)
     {
         UriIndex = uriIndex;
         Uri = uri;
         _httpClient = httpClient;
         _messageChannelWriter = messageChannelWriter;
+        _progress = progress;
     }
 
     private int UriIndex { get; }
@@ -30,13 +37,18 @@ internal sealed class UriRunner
     private Uri Uri { get; }
 
     internal static UriRunner Create(
-        int uriIndex, Uri uri, HttpClient httpClient, ChannelWriter<InAppMessage> messageChannelWriter)
+        int uriIndex,
+        Uri uri,
+        HttpClient httpClient,
+        ChannelWriter<InAppMessage> messageChannelWriter,
+        IProgress<UriProgressReport> progress)
     {
         ArgumentNullException.ThrowIfNull(uri);
         ArgumentNullException.ThrowIfNull(httpClient);
         ArgumentNullException.ThrowIfNull(messageChannelWriter);
+        ArgumentNullException.ThrowIfNull(progress);
 
-        return new(uriIndex, uri, httpClient, messageChannelWriter);
+        return new(uriIndex, uri, httpClient, messageChannelWriter, progress);
     }
 
     internal async Task<UriCollectedData> RunAsync(CancellationToken cancellationToken)
@@ -44,10 +56,10 @@ internal sealed class UriRunner
         // Minor implementation detail intended to filter duplicate messages from the channel.
         // We need to use a thread-safe collection because it is not “local” relative to the method that uses it.
         ConcurrentDictionary<Exception, bool> exceptionsWritten = new(ExceptionComparer.Instance);
-        List<Task<RequestCollectedData>> futures = new(RequestCount);
-        using SemaphoreSlim semaphore = new(ConcurrentRequestCount);
+        List<Task<RequestCollectedData>> futures = new(AttemptCount);
+        using SemaphoreSlim semaphore = new(ConcurrentAttemptCount);
         for (int attemptIndex = 0;
-             !cancellationToken.IsCancellationRequested && attemptIndex < RequestCount;
+             !cancellationToken.IsCancellationRequested && attemptIndex < AttemptCount;
              ++attemptIndex)
         {
             var semaphoreTask = semaphore.WaitAsync(cancellationToken);
@@ -83,7 +95,8 @@ internal sealed class UriRunner
 
             long endingTimestamp = Stopwatch.GetTimestamp();
 
-            // TODO: Report progress.
+            UriProgressReport progressReport = new();
+            _progress.Report(progressReport);
             return new(UriIndex, Uri, attemptIndex, startingTimestamp, endingTimestamp, responseFuture);
         }
         finally
