@@ -19,6 +19,7 @@ public sealed partial class MainModel
     private readonly ILogger _logger;
     private readonly ILoggerFactory _loggerFactory;
     private readonly Channel<InAppMessage> _messageChannel;
+    private readonly Progress<double> _progress = new();
     private readonly ProjectDto _projectDto;
 
     public MainModel(IOptions<ProjectDto> projectDto, HttpClient httpClient, ILoggerFactory loggerFactory)
@@ -37,6 +38,12 @@ public sealed partial class MainModel
     private static CultureInfo P => CultureInfo.InvariantCulture;
 
     public ChannelReader<InAppMessage> MessageChannelReader => _messageChannel.Reader;
+
+    public event EventHandler<double> ProgressChanged
+    {
+        add => _progress.ProgressChanged += value;
+        remove => _progress.ProgressChanged -= value;
+    }
 
     public async Task<ProjectReportDto> RunAsync(CancellationToken cancellationToken)
     {
