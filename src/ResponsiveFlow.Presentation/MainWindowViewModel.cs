@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -26,6 +27,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         _model.ProgressChanged += OnModelProgressChanged;
     }
 
+    private static PropertyChangedEventArgs ProgressValueChangedEventArgs { get; } = new(nameof(ProgressValue));
+
     public IAsyncRelayCommand RunCommand => _runCommand;
 
     public string Title { get; } = CreateTitle();
@@ -39,7 +42,13 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     public double ProgressValue
     {
         get => _progressValue;
-        private set => SetProperty(ref _progressValue, value);
+        private set
+        {
+            if (_progressValue.Equals(value))
+                return;
+            _progressValue = value;
+            OnPropertyChanged(ProgressValueChangedEventArgs);
+        }
     }
 
     public ObservableCollection<InAppMessageViewModel> Messages { get; } = [];
@@ -84,7 +93,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         {
             ProgressBarVisibility = Visibility.Visible;
             var collectedDataFuture = _model.RunAsync(cancellationToken);
-            OnPropertyChanged(nameof(ProgressBarVisibility));
             _ = await collectedDataFuture.ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
         }
         catch (OperationCanceledException) { }
