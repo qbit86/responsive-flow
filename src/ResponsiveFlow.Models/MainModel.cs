@@ -47,7 +47,8 @@ public sealed partial class MainModel
 
     public async Task<ProjectReportDto> RunAsync(CancellationToken cancellationToken)
     {
-        var projectRunner = ProjectRunner.Create(_projectDto, _httpClient, _messageChannel.Writer, _loggerFactory);
+        var projectRunner = ProjectRunner.Create(
+            _projectDto, _httpClient, _messageChannel.Writer, _progress, _loggerFactory);
         LogProcessingProject(projectRunner.OutputDirectory);
         var collectedDataFuture = projectRunner.RunAsync(cancellationToken);
         try
