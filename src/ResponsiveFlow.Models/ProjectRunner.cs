@@ -66,7 +66,9 @@ internal sealed partial class ProjectRunner
     private async Task<ProjectCollectedData> RunUncheckedAsync(CancellationToken cancellationToken)
     {
         var uriCollectedDataset = new UriCollectedData[_uris.Count];
-        Progress<UriProgressReport> progress = new();
+        int attemptCount = 0;
+        double totalAttemptCount = _uris.Count * UriRunner.AttemptCount;
+        Progress<UriProgressReport> progress = new(HandleProgressChanged);
         for (int uriIndex = 0; !cancellationToken.IsCancellationRequested && uriIndex < _uris.Count; ++uriIndex)
         {
             var uri = _uris[uriIndex];
@@ -79,6 +81,13 @@ internal sealed partial class ProjectRunner
         }
 
         return new(uriCollectedDataset);
+
+        void HandleProgressChanged(UriProgressReport report)
+        {
+            _ = Interlocked.Increment(ref attemptCount);
+            double progressValue = attemptCount / totalAttemptCount;
+            _progress.Report(progressValue);
+        }
     }
 
     private static string GetOutputDirectoryOrFallback(ProjectDto projectDto, DateTime startTime)
