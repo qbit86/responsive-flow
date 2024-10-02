@@ -14,6 +14,14 @@
             <Button Margin="8" MinHeight="32" MinWidth="64" Command="{Binding RunCommand}">Run</Button>
         </StackPanel>
         <ProgressBar
+            DockPanel.Dock="Top"
+            Height="12"
+            HorizontalAlignment="Stretch"
+            Margin="8 0 8 8"
+            Maximum="1.0"
+            Value="{Binding ProgressValue, Mode=OneWay}"
+            Visibility="{Binding ProgressBarVisibility, Mode=OneWay}" />
+        <ProgressBar
             DockPanel.Dock="Bottom"
             Height="12"
             HorizontalAlignment="Stretch"
