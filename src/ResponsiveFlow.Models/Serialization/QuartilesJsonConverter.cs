@@ -13,7 +13,7 @@ internal sealed class QuartilesJsonConverter : JsonConverter<Quartiles>
 
     public override void Write(Utf8JsonWriter writer, Quartiles value, JsonSerializerOptions options)
     {
-        FormattableString formattable = $"[ {value.Q0}, {value.Q1}, {value.Q2}, {value.Q3}, {value.Q4} ]";
+        FormattableString formattable = $"[{value.Q0}, {value.Q1}, {value.Q2}, {value.Q3}, {value.Q4}]";
         writer.WriteRawValue(FormattableString.Invariant(formattable));
     }
 }
