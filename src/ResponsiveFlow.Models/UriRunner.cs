@@ -69,7 +69,7 @@ internal sealed class UriRunner
         }
 
         var requestCollectedDataset = await Task.WhenAll(futures).ConfigureAwait(false);
-        return new(UriIndex, Uri, requestCollectedDataset);
+        return UriCollectedData.Create(UriIndex, Uri, requestCollectedDataset);
     }
 
     private async Task<RequestCollectedData> RequestAsync(
