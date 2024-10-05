@@ -4,7 +4,6 @@ using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -90,7 +89,3 @@ public sealed partial class MainModel
         }
     }
 }
-
-[JsonSourceGenerationOptions(WriteIndented = true)]
-[JsonSerializable(typeof(ProjectReportDto))]
-internal sealed partial class ProjectReportJsonSerializerContext : JsonSerializerContext;

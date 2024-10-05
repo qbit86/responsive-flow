@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using Perfolizer;
 using Perfolizer.Horology;
 using Perfolizer.Mathematics.QuantileEstimators;
@@ -36,15 +37,16 @@ public sealed class Metrics
 
     public double StandardError { get; }
 
+    [JsonConverter(typeof(QuartilesJsonConverter))]
     public Quartiles Quartiles { get; }
 
     public double InterquartileRange { get; }
 
-    public double Min => Quartiles.Min;
+    [JsonIgnore] public double Min => Quartiles.Min;
 
-    public double Median => Quartiles.Q2;
+    [JsonIgnore] public double Median => Quartiles.Q2;
 
-    public double Max => Quartiles.Max;
+    [JsonIgnore] public double Max => Quartiles.Max;
 
     public static Metrics Create(Sample sample)
     {
