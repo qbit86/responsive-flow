@@ -4,11 +4,30 @@ using System.Text;
 
 namespace ResponsiveFlow;
 
-public sealed record UriCollectedData(
-    int UriIndex,
-    Uri Uri,
-    ICollection<RequestCollectedData> RequestCollectedDataset)
+public sealed record UriCollectedData
 {
+    private UriCollectedData(int uriIndex, Uri uri, ICollection<RequestCollectedData> requestCollectedDataset)
+    {
+        UriIndex = uriIndex;
+        Uri = uri;
+        RequestCollectedDataset = requestCollectedDataset;
+    }
+
+    public int UriIndex { get; }
+
+    public Uri Uri { get; }
+
+    public ICollection<RequestCollectedData> RequestCollectedDataset { get; }
+
+    internal static UriCollectedData Create(
+        int uriIndex, Uri uri, ICollection<RequestCollectedData> requestCollectedDataset)
+    {
+        ArgumentNullException.ThrowIfNull(uri);
+        ArgumentNullException.ThrowIfNull(requestCollectedDataset);
+
+        return new(uriIndex, uri, requestCollectedDataset);
+    }
+
     public override string ToString()
     {
         StringBuilder builder = new();
@@ -26,5 +45,13 @@ public sealed record UriCollectedData(
         builder.Append($", {nameof(Uri)} = ").Append(Uri);
         builder.Append($", {nameof(RequestCollectedDataset)}.Count = ").Append(RequestCollectedDataset.Count);
         return true;
+    }
+
+    public void Deconstruct(
+        out int uriIndex, out Uri uri, out ICollection<RequestCollectedData> requestCollectedDataset)
+    {
+        uriIndex = UriIndex;
+        uri = Uri;
+        requestCollectedDataset = RequestCollectedDataset;
     }
 }
