@@ -4,7 +4,6 @@ using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -60,10 +59,10 @@ public sealed partial class MainModel
             {
                 builder.Clear();
                 builder.Append(P, $"#{uriReport.UriIndex} {uriReport.Uri}");
-                if (uriReport.Statistics is { } s)
-                    _ = s.PrintMembers(builder.AppendLine());
+                if (uriReport.Metrics is { } metrics)
+                    _ = metrics.PrintMembers(builder.AppendLine());
 
-                var level = uriReport.Statistics is null ? LogLevel.Warning : LogLevel.Information;
+                var level = uriReport.Metrics is null ? LogLevel.Warning : LogLevel.Information;
                 var task = _messageChannel.Writer.WriteAsync(
                     InAppMessage.FromMessage(builder.ToString(), level), cancellationToken);
                 await task.ConfigureAwait(false);
@@ -90,7 +89,3 @@ public sealed partial class MainModel
         }
     }
 }
-
-[JsonSourceGenerationOptions(WriteIndented = true)]
-[JsonSerializable(typeof(ProjectReportDto))]
-internal sealed partial class ProjectReportJsonSerializerContext : JsonSerializerContext;
