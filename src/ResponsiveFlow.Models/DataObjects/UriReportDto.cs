@@ -7,18 +7,18 @@ namespace ResponsiveFlow;
 
 public sealed class UriReportDto
 {
-    private UriReportDto(int uriIndex, Uri uri, Statistics? statistics)
+    private UriReportDto(int uriIndex, Uri uri, Metrics? metrics)
     {
         UriIndex = uriIndex;
         Uri = uri;
-        Statistics = statistics;
+        Metrics = metrics;
     }
 
     public int UriIndex { get; }
 
     public Uri Uri { get; }
 
-    public Statistics? Statistics { get; }
+    public Metrics? Metrics { get; }
 
     public static UriReportDto Create(UriCollectedData uriCollectedData)
     {
@@ -31,8 +31,8 @@ public sealed class UriReportDto
             .ToList();
         if (values.Count is 0)
             return new(uriIndex, uri, null);
-        var statistics = Statistics.Create(values);
-        return new(uriIndex, uri, statistics);
+        var metrics = Metrics.Create(values);
+        return new(uriIndex, uri, metrics);
     }
 
     public override string ToString()
@@ -48,10 +48,10 @@ public sealed class UriReportDto
 
     private bool PrintMembers(StringBuilder builder)
     {
-        builder.Append("UriIndex = ").Append(UriIndex);
-        builder.Append(", Uri = ").Append(Uri);
-        if (Statistics is { } statistics)
-            builder.Append(", Statistics = ").Append(statistics);
+        builder.Append($"{nameof(UriIndex)} = ").Append(UriIndex);
+        builder.Append($", {nameof(Uri)} = ").Append(Uri);
+        if (Metrics is { } metrics)
+            builder.Append($", {nameof(Metrics)} = ").Append(metrics);
         return true;
     }
 }

@@ -6,9 +6,9 @@ using System.Text;
 
 namespace ResponsiveFlow;
 
-public sealed class Statistics
+public sealed class Metrics
 {
-    private Statistics(double count, double mean, double variance, double standardDeviation, double standardError)
+    private Metrics(double count, double mean, double variance, double standardDeviation, double standardError)
     {
         Count = count;
         Mean = mean;
@@ -29,7 +29,7 @@ public sealed class Statistics
 
     public double StandardError { get; }
 
-    public static Statistics Create(IReadOnlyCollection<double> values)
+    public static Metrics Create(IReadOnlyCollection<double> values)
     {
         ArgumentNullException.ThrowIfNull(values);
         ArgumentOutOfRangeException.ThrowIfZero(values.Count);
@@ -51,7 +51,7 @@ public sealed class Statistics
     public override string ToString()
     {
         StringBuilder builder = new();
-        builder.Append(nameof(Statistics));
+        builder.Append(nameof(Metrics));
         builder.Append(" { ");
         if (PrintMembersUnchecked(builder))
             builder.Append(' ');
