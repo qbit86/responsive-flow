@@ -77,7 +77,7 @@ internal sealed partial class ProjectRunner
         {
             var uri = _uris[uriIndex];
             LogProcessingUrl(uri, uriIndex, _uris.Count);
-            var uriRunner = UriRunner.Create(uriIndex, uri, _httpClient, _messageChannelWriter, progress);
+            var uriRunner = UriRunner.Create(uriIndex, uri, _httpClient, progress);
             var uriCollectedDataFuture = uriRunner.RunAsync(cancellationToken);
             var uriCollectedData = await uriCollectedDataFuture.ConfigureAwait(false);
             await WriteUriCollectedDataAsync(uriCollectedData, cancellationToken).ConfigureAwait(false);
@@ -89,6 +89,12 @@ internal sealed partial class ProjectRunner
 
         void HandleProgressChanged(UriProgressReport report)
         {
+            if (report.Exception is { } exception)
+            {
+                _ = _messageChannelWriter.TryWrite(InAppMessage.FromException(exception));
+                return;
+            }
+
             _ = Interlocked.Increment(ref attemptCount);
             double progressValue = attemptCount / totalAttemptCount;
             _progress.Report(progressValue);

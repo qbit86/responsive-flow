@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net.Http;
 using System.Threading;
-using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace ResponsiveFlow;
@@ -15,20 +14,17 @@ internal sealed class UriRunner
     private const int ConcurrentAttemptCount = 20;
 
     private readonly HttpClient _httpClient;
-    private readonly ChannelWriter<InAppMessage> _messageChannelWriter;
     private readonly IProgress<UriProgressReport> _progress;
 
     private UriRunner(
         int uriIndex,
         Uri uri,
         HttpClient httpClient,
-        ChannelWriter<InAppMessage> messageChannelWriter,
         IProgress<UriProgressReport> progress)
     {
         UriIndex = uriIndex;
         Uri = uri;
         _httpClient = httpClient;
-        _messageChannelWriter = messageChannelWriter;
         _progress = progress;
     }
 
@@ -40,15 +36,13 @@ internal sealed class UriRunner
         int uriIndex,
         Uri uri,
         HttpClient httpClient,
-        ChannelWriter<InAppMessage> messageChannelWriter,
         IProgress<UriProgressReport> progress)
     {
         ArgumentNullException.ThrowIfNull(uri);
         ArgumentNullException.ThrowIfNull(httpClient);
-        ArgumentNullException.ThrowIfNull(messageChannelWriter);
         ArgumentNullException.ThrowIfNull(progress);
 
-        return new(uriIndex, uri, httpClient, messageChannelWriter, progress);
+        return new(uriIndex, uri, httpClient, progress);
     }
 
     internal async Task<UriCollectedData> RunAsync(CancellationToken cancellationToken)
@@ -90,25 +84,17 @@ internal sealed class UriRunner
             catch (OperationCanceledException) { }
             catch (Exception exception)
             {
-                await WriteExceptionAsync(exception).ConfigureAwait(false);
+                if (exceptionsWritten.TryAdd(exception, true))
+                    _progress.Report(new(exception));
             }
 
             long endingTimestamp = Stopwatch.GetTimestamp();
-
-            UriProgressReport progressReport = new();
-            _progress.Report(progressReport);
+            _progress.Report(new());
             return new(UriIndex, Uri, attemptIndex, startingTimestamp, endingTimestamp, responseFuture);
         }
         finally
         {
             _ = semaphore.Release();
-        }
-
-        ValueTask WriteExceptionAsync(Exception exception)
-        {
-            if (!exceptionsWritten.TryAdd(exception, true))
-                return ValueTask.CompletedTask;
-            return _messageChannelWriter.WriteAsync(InAppMessage.FromException(exception), cancellationToken);
         }
     }
 }
