@@ -10,12 +10,14 @@ namespace ResponsiveFlow;
 public sealed record UriCollectedData
 {
     private UriCollectedData(
-        int uriIndex, Uri uri, ICollection<RequestCollectedData> requestCollectedDataset, Sample? sample)
+        int uriIndex, Uri uri, ICollection<RequestCollectedData> requestCollectedDataset,
+        Sample? sample = null, Metrics? metrics = null)
     {
         UriIndex = uriIndex;
         Uri = uri;
         RequestCollectedDataset = requestCollectedDataset;
         Sample = sample;
+        Metrics = metrics;
     }
 
     public int UriIndex { get; }
@@ -25,6 +27,8 @@ public sealed record UriCollectedData
     public ICollection<RequestCollectedData> RequestCollectedDataset { get; }
 
     public Sample? Sample { get; }
+
+    public Metrics? Metrics { get; }
 
     public int SampleSize => (Sample?.Size).GetValueOrDefault();
 
@@ -38,8 +42,12 @@ public sealed record UriCollectedData
             .Where(it => it.ResponseFuture.IsCompletedSuccessfully)
             .Select(it => it.Duration().TotalMilliseconds)
             .ToList();
-        Sample? sample = values.Count > 0 ? new(values, TimeUnit.Millisecond) : null;
-        return new(uriIndex, uri, requestCollectedDataset, sample);
+        if (values.Count is 0)
+            return new(uriIndex, uri, requestCollectedDataset);
+
+        Sample sample = new(values, TimeUnit.Millisecond);
+        var metrics = Metrics.Create(sample);
+        return new(uriIndex, uri, requestCollectedDataset, sample, metrics);
     }
 
     public override string ToString()
@@ -61,13 +69,19 @@ public sealed record UriCollectedData
         builder.Append($", {nameof(SampleSize)} = ").Append(sampleSize);
         if (RequestCollectedDataset.Count != sampleSize)
             builder.Append($", {nameof(RequestCollectedDataset)}.Count = ").Append(RequestCollectedDataset.Count);
+        if (Metrics is not null)
+        {
+            builder.Append(", ");
+            Metrics.PrintMembers(builder);
+        }
+
         return true;
     }
 
-    public void Deconstruct(out int uriIndex, out Uri uri, out Sample? sample)
+    public void Deconstruct(out int uriIndex, out Uri uri, out Metrics? metrics)
     {
         uriIndex = UriIndex;
         uri = Uri;
-        sample = Sample;
+        metrics = Metrics;
     }
 }

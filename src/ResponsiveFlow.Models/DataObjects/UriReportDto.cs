@@ -22,10 +22,7 @@ public sealed class UriReportDto
     {
         ArgumentNullException.ThrowIfNull(uriCollectedData);
 
-        (int uriIndex, var uri, var sample) = uriCollectedData;
-        if (sample is not { Size: > 0 })
-            return new(uriIndex, uri, null);
-        var metrics = Metrics.Create(sample);
+        (int uriIndex, var uri, var metrics) = uriCollectedData;
         return new(uriIndex, uri, metrics);
     }
 
@@ -44,8 +41,12 @@ public sealed class UriReportDto
     {
         builder.Append($"{nameof(UriIndex)} = ").Append(UriIndex);
         builder.Append($", {nameof(Uri)} = ").Append(Uri);
-        if (Metrics is { } metrics)
-            builder.Append($", {nameof(Metrics)} = ").Append(metrics);
+        if (Metrics is not null)
+        {
+            builder.Append(", ");
+            Metrics.PrintMembers(builder);
+        }
+
         return true;
     }
 }
