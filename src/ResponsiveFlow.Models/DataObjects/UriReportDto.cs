@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
@@ -27,7 +26,7 @@ public sealed class UriReportDto
         (int uriIndex, var uri, var requests) = uriCollectedData;
         var values = requests
             .Where(it => it.ResponseFuture.IsCompletedSuccessfully)
-            .Select(it => Stopwatch.GetElapsedTime(it.StartingTimestamp, it.EndingTimestamp).TotalMilliseconds)
+            .Select(it => it.Duration().TotalMilliseconds)
             .ToList();
         if (values.Count is 0)
             return new(uriIndex, uri, null);
