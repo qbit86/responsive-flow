@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Text;
 
 namespace ResponsiveFlow;
@@ -23,14 +22,10 @@ public sealed class UriReportDto
     {
         ArgumentNullException.ThrowIfNull(uriCollectedData);
 
-        (int uriIndex, var uri, var requests) = uriCollectedData;
-        var values = requests
-            .Where(it => it.ResponseFuture.IsCompletedSuccessfully)
-            .Select(it => it.Duration().TotalMilliseconds)
-            .ToList();
-        if (values.Count is 0)
+        (int uriIndex, var uri, var sample) = uriCollectedData;
+        if (sample is not { Size: > 0 })
             return new(uriIndex, uri, null);
-        var metrics = Metrics.Create(values);
+        var metrics = Metrics.Create(sample);
         return new(uriIndex, uri, metrics);
     }
 
