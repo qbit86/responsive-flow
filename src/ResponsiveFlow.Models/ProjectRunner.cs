@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Net.Http;
+using System.Text;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -32,6 +34,8 @@ internal sealed partial class ProjectRunner
         _progress = progress;
         _logger = logger;
     }
+
+    private static CultureInfo P => CultureInfo.InvariantCulture;
 
     internal string OutputDirectory { get; }
 
@@ -76,6 +80,7 @@ internal sealed partial class ProjectRunner
             var uriRunner = UriRunner.Create(uriIndex, uri, _httpClient, _messageChannelWriter, progress);
             var uriCollectedDataFuture = uriRunner.RunAsync(cancellationToken);
             var uriCollectedData = await uriCollectedDataFuture.ConfigureAwait(false);
+            await WriteUriCollectedDataAsync(uriCollectedData, cancellationToken).ConfigureAwait(false);
             uriCollectedDataset[uriIndex] = uriCollectedData;
             LogProcessedUrl(uri, uriIndex, _uris.Count);
         }
@@ -110,5 +115,19 @@ internal sealed partial class ProjectRunner
         }
 
         return uris;
+    }
+
+    private async Task WriteUriCollectedDataAsync(
+        UriCollectedData uriCollectedData, CancellationToken cancellationToken)
+    {
+        (int uriIndex, var uri, var metrics) = uriCollectedData;
+        StringBuilder builder = new();
+        builder.Append(P, $"#{uriIndex} {uri}");
+        if (metrics is not null)
+            _ = metrics.PrintMembers(builder.AppendLine());
+        var level = metrics is null ? LogLevel.Warning : LogLevel.Information;
+        var task = _messageChannelWriter.WriteAsync(
+            InAppMessage.FromMessage(builder.ToString(), level), cancellationToken);
+        await task.ConfigureAwait(false);
     }
 }

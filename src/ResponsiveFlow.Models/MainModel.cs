@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Globalization;
 using System.IO;
 using System.Net.Http;
-using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Channels;
@@ -34,8 +32,6 @@ public sealed partial class MainModel
         _loggerFactory = loggerFactory;
     }
 
-    private static CultureInfo P => CultureInfo.InvariantCulture;
-
     public ChannelReader<InAppMessage> MessageChannelReader => _messageChannel.Reader;
 
     public event EventHandler<double> ProgressChanged
@@ -54,20 +50,6 @@ public sealed partial class MainModel
         {
             var projectCollectedData = await collectedDataFuture.ConfigureAwait(false);
             var projectReport = ProjectReportDto.Create(projectCollectedData);
-            StringBuilder builder = new();
-            foreach (var uriReport in projectReport.UriReports)
-            {
-                builder.Clear();
-                builder.Append(P, $"#{uriReport.UriIndex} {uriReport.Uri}");
-                if (uriReport.Metrics is { } metrics)
-                    _ = metrics.PrintMembers(builder.AppendLine());
-
-                var level = uriReport.Metrics is null ? LogLevel.Warning : LogLevel.Information;
-                var task = _messageChannel.Writer.WriteAsync(
-                    InAppMessage.FromMessage(builder.ToString(), level), cancellationToken);
-                await task.ConfigureAwait(false);
-            }
-
             _ = Directory.CreateDirectory(projectRunner.OutputDirectory);
             string path = Path.Join(projectRunner.OutputDirectory, "report.json");
             Stream fileStream = File.OpenWrite(path);
