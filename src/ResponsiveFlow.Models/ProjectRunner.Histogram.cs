@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -20,57 +19,21 @@ internal sealed partial class ProjectRunner
             return;
 
         var histogramPolicy = HistogramPolicy.Instance;
-        var histogramBinPolicy = HistogramBinPolicy.Instance;
+        var binPolicy = HistogramBinPolicy.Instance;
         var histogram = SimpleHistogramBuilder.Instance.Build(sample.Values);
-        (int uriIndex, var uri, _) = uriCollectedData;
         var bins = histogramPolicy.GetBins(histogram);
-        const double margin = 8.0;
-        const double pivotX = margin;
-        const double pivotY = margin;
-
-        const double maxRectWidthPx = 512.0;
-        const double minRectHeightPx = 24.0;
-        double minRectHeightMs = bins.Min(histogramBinPolicy.Gap);
-        double maxRectHeightMs = bins.Max(histogramBinPolicy.Gap);
-        double maxRectHeightPx = minRectHeightPx * maxRectHeightMs / minRectHeightMs;
-        double maxRectWidthUnits = bins.Max(histogramBinPolicy.Height);
-
-        double widthPixelsByUnits = maxRectWidthPx / maxRectWidthUnits;
-        double heightPixelsByMs = maxRectHeightPx / maxRectHeightMs;
-
-        XNamespace ns = "http://www.w3.org/2000/svg";
-        double plotHeight = bins.Sum(it => heightPixelsByMs * histogramBinPolicy.Gap(it));
-        XElement root = new(ns + "svg",
-            new XAttribute("version", "2"),
-            new XAttribute("width", maxRectWidthPx + 2 * margin),
-            new XAttribute("height", plotHeight + 2 * margin));
+        SvgHistogramBuilder<HistogramBin> builder = new();
+        var root = builder.Build(bins, binPolicy);
         XDocument doc = new(root);
 
-        double y = pivotY;
-        for (int i = 0; i < bins.Count; ++i)
-        {
-            var bin = bins[i];
-            double width = widthPixelsByUnits * histogramBinPolicy.Height(bin);
-            double height = heightPixelsByMs * histogramBinPolicy.Gap(bin);
-
-            XElement rect = new(ns + "rect",
-                new XAttribute("width", width),
-                new XAttribute("height", height),
-                new XAttribute("x", pivotX),
-                new XAttribute("y", y),
-                new XAttribute("fill", BinColors[i & 1]));
-            root.Add(rect);
-
-            y += height;
-        }
-
         var options = StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries;
-        string uriSlug = uri.GetComponents(
+        (int uriIndex, var uri, _) = uriCollectedData;
+        string uriString = uri.GetComponents(
             UriComponents.AbsoluteUri & ~UriComponents.Scheme, UriFormat.SafeUnescaped);
-        string[] validParts = uriSlug.Split(Path.GetInvalidFileNameChars(), options);
-        string filename = string.Join("-", validParts);
+        string[] validParts = uriString.Split(Path.GetInvalidFileNameChars(), options);
+        string uriSlug = string.Join("-", validParts);
         _ = Directory.CreateDirectory(OutputDirectory);
-        string path = Path.Join(OutputDirectory, $"{uriIndex}-{filename}.svg");
+        string path = Path.Join(OutputDirectory, $"{uriIndex}-{uriSlug}.svg");
         Stream stream = File.OpenWrite(path);
         await using (stream)
         {
