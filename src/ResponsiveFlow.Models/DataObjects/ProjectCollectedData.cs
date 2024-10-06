@@ -18,7 +18,7 @@ public readonly record struct ProjectCollectedData(IReadOnlyCollection<UriCollec
 
     private bool PrintMembers(StringBuilder builder)
     {
-        builder.Append("UriCollectedDataset.Count = ").Append(UriCollectedDataset.Count);
+        builder.Append($"{nameof(UriCollectedDataset)}.Count = ").Append(UriCollectedDataset.Count);
         return true;
     }
 }
