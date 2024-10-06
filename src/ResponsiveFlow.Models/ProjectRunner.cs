@@ -82,6 +82,8 @@ internal sealed partial class ProjectRunner
                 var uriRunner = UriRunner.Create(uriIndex, uri, _httpClient, progress);
                 var uriCollectedDataFuture = uriRunner.RunAsync(cancellationToken);
                 var uriCollectedData = await uriCollectedDataFuture.ConfigureAwait(false);
+                var histogramTask = BuildThenSaveHistogramAsync(uriCollectedData, cancellationToken);
+                await histogramTask.ConfigureAwait(false);
                 await WriteUriCollectedDataAsync(uriCollectedData, cancellationToken).ConfigureAwait(false);
                 uriCollectedDataset[uriIndex] = uriCollectedData;
             }
