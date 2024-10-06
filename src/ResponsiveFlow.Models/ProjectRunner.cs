@@ -94,6 +94,7 @@ internal sealed partial class ProjectRunner
             }
         }
 
+        uriCollectedDataset.AsSpan().Sort(UriCollectedDataComparer.Instance);
         return new(uriCollectedDataset);
 
         void HandleProgressChanged(UriProgressReport report)
