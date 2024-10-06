@@ -46,12 +46,6 @@ internal sealed partial class ProjectRunner
         IProgress<double> progress,
         ILoggerFactory loggerFactory)
     {
-        ArgumentNullException.ThrowIfNull(projectDto);
-        ArgumentNullException.ThrowIfNull(httpClient);
-        ArgumentNullException.ThrowIfNull(messageChannelWriter);
-        ArgumentNullException.ThrowIfNull(progress);
-        ArgumentNullException.ThrowIfNull(loggerFactory);
-
         var validUris = GetValidUris(projectDto);
         var startTime = DateTime.Now;
         string effectiveOutputDirectory = GetOutputDirectoryOrFallback(projectDto, startTime);
@@ -82,7 +76,7 @@ internal sealed partial class ProjectRunner
                 var uriRunner = UriRunner.Create(uriIndex, uri, _httpClient, progress);
                 var uriCollectedDataFuture = uriRunner.RunAsync(cancellationToken);
                 var uriCollectedData = await uriCollectedDataFuture.ConfigureAwait(false);
-                var histogramTask = BuildThenSaveHistogramAsync(uriCollectedData, cancellationToken);
+                var histogramTask = BuildThenSaveHistogramsAsync(uriCollectedData, cancellationToken);
                 await histogramTask.ConfigureAwait(false);
                 await WriteUriCollectedDataAsync(uriCollectedData, cancellationToken).ConfigureAwait(false);
                 uriCollectedDataset[uriIndex] = uriCollectedData;
