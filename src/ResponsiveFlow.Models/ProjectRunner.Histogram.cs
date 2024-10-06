@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -10,8 +11,7 @@ namespace ResponsiveFlow;
 
 internal sealed partial class ProjectRunner
 {
-    /// <seealso href="https://en.wikipedia.org/wiki/Web_colors#Extended_colors" />
-    private static string[] BinColors { get; } = ["LightSkyBlue", "SkyBlue"];
+    private static IReadOnlyList<string> BinColors => SvgHistogramColors.Blue;
 
     private async Task BuildThenSaveHistogramAsync(
         UriCollectedData uriCollectedData, CancellationToken cancellationToken)
