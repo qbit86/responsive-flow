@@ -2,6 +2,8 @@
 
 ResponsiveFlow is a minimalist WPF application that measures the time of HTTP requests.
 
+![](./assets/screenshot.png)
+
 ## Usage
 
 The application accepts the _appsettings.json_ configuration file as input.
@@ -26,9 +28,12 @@ See _src/ResponsiveFlow.Application/appsettings-example.json_ for a reference.
 }
 ```
 
-The continuous progress bar at the bottom of the window shows overall responsiveness rather than actual progress.
+The output report is saved in the subfolder of the directory specified by the `OutputDir` setting.
+If it's omitted, the default is the subfolder in the user's home directory.
+For example _c:/Users/{Username}/Documents/ResponsiveFlow/281_01-49-19/_.
 
-![](./assets/screenshot.png)
+The continuous progress bar at the bottom of the window shows overall responsiveness;
+the actual progress is shown by the progress bar at the top.
 
 ## Implementation details
 
