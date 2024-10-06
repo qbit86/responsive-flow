@@ -21,6 +21,14 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ResponsiveFlow.Presentation
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ResponsiveFlow.Models", "src\ResponsiveFlow.Models\ResponsiveFlow.Models.csproj", "{E2EC989B-A74A-4E07-BFC2-F51A60D033B9}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{D20619D4-3E8B-42E1-8D14-2AF2332CE85B}"
+	ProjectSection(SolutionItems) = preProject
+		tests\.editorconfig = tests\.editorconfig
+		tests\Directory.Build.props = tests\Directory.Build.props
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests.Models", "tests\Tests.Models\Tests.Models.csproj", "{E0C82334-F0C0-4742-A1DC-6E80C0C4C7D3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -42,10 +50,15 @@ Global
 		{E2EC989B-A74A-4E07-BFC2-F51A60D033B9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E2EC989B-A74A-4E07-BFC2-F51A60D033B9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E2EC989B-A74A-4E07-BFC2-F51A60D033B9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E0C82334-F0C0-4742-A1DC-6E80C0C4C7D3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E0C82334-F0C0-4742-A1DC-6E80C0C4C7D3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E0C82334-F0C0-4742-A1DC-6E80C0C4C7D3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E0C82334-F0C0-4742-A1DC-6E80C0C4C7D3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{98A14466-BE76-4F17-8CCA-3723A74381C3} = {1D7319D4-6DA2-4EB5-89BE-EBFA17FDDCBE}
 		{3ACF3B1D-CE7D-4554-9B20-AEC65132CE12} = {1D7319D4-6DA2-4EB5-89BE-EBFA17FDDCBE}
 		{E2EC989B-A74A-4E07-BFC2-F51A60D033B9} = {1D7319D4-6DA2-4EB5-89BE-EBFA17FDDCBE}
+		{E0C82334-F0C0-4742-A1DC-6E80C0C4C7D3} = {D20619D4-3E8B-42E1-8D14-2AF2332CE85B}
 	EndGlobalSection
 EndGlobal
