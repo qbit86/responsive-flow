@@ -38,10 +38,11 @@ internal sealed partial class ProjectRunner
         double heightPixelsByMs = maxRectHeightPx / maxRectHeightMs;
 
         XNamespace ns = "http://www.w3.org/2000/svg";
+        double plotHeight = bins.Sum(it => heightPixelsByMs * (it.Upper - it.Lower));
         XElement root = new(ns + "svg",
             new XAttribute("version", "2"),
             new XAttribute("width", maxRectWidthPx + 2 * margin),
-            new XAttribute("height", maxRectHeightPx * bins.Count + 2 * margin));
+            new XAttribute("height", plotHeight + 2 * margin));
         XDocument doc = new(root);
 
         double y = pivotY;
