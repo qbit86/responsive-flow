@@ -77,12 +77,25 @@ internal sealed partial class ProjectRunner
         {
             var uri = _uris[uriIndex];
             LogProcessingUrl(uri, uriIndex, _uris.Count);
-            var uriRunner = UriRunner.Create(uriIndex, uri, _httpClient, progress);
-            var uriCollectedDataFuture = uriRunner.RunAsync(cancellationToken);
-            var uriCollectedData = await uriCollectedDataFuture.ConfigureAwait(false);
-            await WriteUriCollectedDataAsync(uriCollectedData, cancellationToken).ConfigureAwait(false);
-            uriCollectedDataset[uriIndex] = uriCollectedData;
-            LogProcessedUrl(uri, uriIndex, _uris.Count);
+            try
+            {
+                var uriRunner = UriRunner.Create(uriIndex, uri, _httpClient, progress);
+                var uriCollectedDataFuture = uriRunner.RunAsync(cancellationToken);
+                var uriCollectedData = await uriCollectedDataFuture.ConfigureAwait(false);
+                await WriteUriCollectedDataAsync(uriCollectedData, cancellationToken).ConfigureAwait(false);
+                uriCollectedDataset[uriIndex] = uriCollectedData;
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception exception)
+            {
+                var message = InAppMessage.FromException(exception);
+                var task = _messageChannelWriter.WriteAsync(message, cancellationToken);
+                await task.ConfigureAwait(false);
+            }
+            finally
+            {
+                LogProcessedUrl(uri, uriIndex, _uris.Count);
+            }
         }
 
         return new(uriCollectedDataset);

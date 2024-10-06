@@ -1,5 +1,5 @@
 [MainModel.cs]
 dotnet_diagnostic.CA1003.severity = none # Use generic event handler instances
 
-[UriRunner.cs]
+[*Runner.cs]
 dotnet_diagnostic.CA1031.severity = none # Do not catch general exception types

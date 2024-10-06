@@ -45,17 +45,17 @@ public sealed partial class MainModel
         var projectRunner = ProjectRunner.Create(
             _projectDto, _httpClient, _messageChannel.Writer, _progress, _loggerFactory);
         LogProcessingProject(projectRunner.OutputDirectory);
-        var collectedDataFuture = projectRunner.RunAsync(cancellationToken);
         try
         {
+            var collectedDataFuture = projectRunner.RunAsync(cancellationToken);
             var projectCollectedData = await collectedDataFuture.ConfigureAwait(false);
             var projectReport = ProjectReportDto.Create(projectCollectedData);
             _ = Directory.CreateDirectory(projectRunner.OutputDirectory);
             string path = Path.Join(projectRunner.OutputDirectory, "report.json");
-            Stream fileStream = File.OpenWrite(path);
-            await using (fileStream)
+            Stream utf8Json = File.OpenWrite(path);
+            await using (utf8Json)
             {
-                var serializerTask = JsonSerializer.SerializeAsync(fileStream, projectReport,
+                var serializerTask = JsonSerializer.SerializeAsync(utf8Json, projectReport,
                     ProjectReportJsonSerializerContext.Default.ProjectReportDto, cancellationToken);
                 await serializerTask.ConfigureAwait(false);
                 var task = _messageChannel.Writer.WriteAsync(
