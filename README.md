@@ -78,6 +78,11 @@ Instead of box plots[^BP], it draws a quartile-respectful histogram with four eq
 (These images have been carefully cherry-picked.
 The usual plots are often uglier, with multiple modes and outliers.)
 
+### Distribution comparison
+
+The application ranks the URLs in the report according to their response times.
+It uses some basic heuristics for comparison (range test, Tukey test, three-sigma test), followed by the Mann–Whitney test (from the Perfolizer library).
+
 ## Implementation details
 
 The solution consists of three projects — Application, Presentation, and Models.
