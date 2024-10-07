@@ -1,10 +1,9 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Net.Http;
+using System.Text;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -12,191 +11,103 @@ using Microsoft.Extensions.Logging;
 
 namespace ResponsiveFlow;
 
-internal readonly record struct Attempt(int UriIndex, Uri Uri, int AttemptIndex);
-
 internal sealed partial class ProjectRunner
 {
-    private const int RequestChannelCapacity = 32;
-    private const int RequestCount = 100;
-
-    /// <remarks>
-    /// Minor implementation detail intended to filter duplicate messages from the channel.
-    /// </remarks>
-    private readonly ConcurrentDictionary<Exception, bool>[] _exceptionsWritten;
-
     private readonly HttpClient _httpClient;
     private readonly ILogger _logger;
     private readonly ChannelWriter<InAppMessage> _messageChannelWriter;
-    private readonly Channel<RequestCollectedData> _requestChannel;
-    private readonly UriCollectedData[] _uriCollectedDataset;
+    private readonly IProgress<double> _progress;
     private readonly List<Uri> _uris;
 
     private ProjectRunner(
         List<Uri> uris,
         string outputDirectory,
         HttpClient httpClient,
-        Channel<RequestCollectedData> requestChannel,
         ChannelWriter<InAppMessage> messageChannelWriter,
-        UriCollectedData[] uriCollectedDataset,
-        ConcurrentDictionary<Exception, bool>[] exceptionsWritten,
+        IProgress<double> progress,
         ILogger logger)
     {
         _uris = uris;
         OutputDirectory = outputDirectory;
         _httpClient = httpClient;
-        _requestChannel = requestChannel;
         _messageChannelWriter = messageChannelWriter;
-        _uriCollectedDataset = uriCollectedDataset;
-        _exceptionsWritten = exceptionsWritten;
+        _progress = progress;
         _logger = logger;
     }
 
+    private static CultureInfo P => CultureInfo.InvariantCulture;
+
     internal string OutputDirectory { get; }
-
-    private ChannelReader<RequestCollectedData> RequestChannelReader => _requestChannel.Reader;
-
-    private ChannelWriter<RequestCollectedData> RequestChannelWriter => _requestChannel.Writer;
 
     internal static ProjectRunner Create(
         ProjectDto projectDto,
         HttpClient httpClient,
         ChannelWriter<InAppMessage> messageChannelWriter,
+        IProgress<double> progress,
         ILoggerFactory loggerFactory)
     {
-        ArgumentNullException.ThrowIfNull(projectDto);
-        ArgumentNullException.ThrowIfNull(httpClient);
-        ArgumentNullException.ThrowIfNull(messageChannelWriter);
-        ArgumentNullException.ThrowIfNull(loggerFactory);
-
         var validUris = GetValidUris(projectDto);
         var startTime = DateTime.Now;
         string effectiveOutputDirectory = GetOutputDirectoryOrFallback(projectDto, startTime);
-        var requestChannel = Channel.CreateBounded<RequestCollectedData>(RequestChannelCapacity);
-        var uriCollectedDataset = validUris.Select((uri, uriIndex) => new UriCollectedData(uriIndex, uri, []))
-            .ToArray();
-        var exceptionsWritten = Enumerable.Range(0, uriCollectedDataset.Length)
-            .Select(_ => new ConcurrentDictionary<Exception, bool>(ExceptionComparer.Instance)).ToArray();
         var logger = loggerFactory.CreateLogger<ProjectRunner>();
-        return new(validUris, effectiveOutputDirectory, httpClient,
-            requestChannel, messageChannelWriter, uriCollectedDataset, exceptionsWritten, logger);
+        return new(validUris, effectiveOutputDirectory, httpClient, messageChannelWriter, progress, logger);
     }
 
     internal Task<ProjectCollectedData> RunAsync(CancellationToken cancellationToken)
     {
-        if (RequestChannelReader.Completion.IsCompleted)
-            ThrowHelpers.ThrowInvalidOperationException("The request channel is already completed.");
+        if (_uris is [])
+            return Task.FromResult(new ProjectCollectedData([]));
 
         return RunUncheckedAsync(cancellationToken);
     }
 
     private async Task<ProjectCollectedData> RunUncheckedAsync(CancellationToken cancellationToken)
     {
-        var cancellationTokenRegistration = cancellationToken.Register(() => _ = RequestChannelWriter.TryComplete());
-        await using (cancellationTokenRegistration.ConfigureAwait(false))
-        {
-            var consumingTask = ConsumeAllAsync(cancellationToken);
-
-            try
-            {
-                var producingTask = ProduceAllAsync(cancellationToken);
-                await producingTask.ConfigureAwait(false);
-            }
-            finally
-            {
-                _ = RequestChannelWriter.TryComplete();
-            }
-
-            await consumingTask.ConfigureAwait(false);
-
-            return new(_uriCollectedDataset);
-        }
-    }
-
-    private async Task ConsumeAllAsync(CancellationToken cancellationToken)
-    {
-        var requestAsyncCollection = RequestChannelReader.ReadAllAsync(cancellationToken);
-        var consumingTask = Parallel.ForEachAsync(requestAsyncCollection, cancellationToken, ConsumeBodyAsync);
-        try
-        {
-            await consumingTask.ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) { }
-    }
-
-    private async Task ProduceAllAsync(CancellationToken cancellationToken)
-    {
-        for (int uriIndex = 0; uriIndex < _uris.Count && !cancellationToken.IsCancellationRequested; ++uriIndex)
+        var uriCollectedDataset = new UriCollectedData[_uris.Count];
+        int attemptCount = 0;
+        double totalAttemptCount = _uris.Count * UriRunner.AttemptCount;
+        Progress<UriProgressReport> progress = new(HandleProgressChanged);
+        for (int uriIndex = 0; !cancellationToken.IsCancellationRequested && uriIndex < _uris.Count; ++uriIndex)
         {
             var uri = _uris[uriIndex];
-            int uriIndexCopy = uriIndex;
-            LogProcessingUrl(uri.AbsoluteUri, uriIndexCopy, _uris.Count);
-            var attempts = Enumerable.Repeat(uri, RequestCount)
-                .Select((u, attemptIndex) => new Attempt(uriIndexCopy, u, attemptIndex));
-            var producingTask = Parallel.ForEachAsync(attempts, cancellationToken, ProduceBodyAsync);
+            LogProcessingUrl(uri, uriIndex, _uris.Count);
             try
             {
-                await producingTask.ConfigureAwait(false);
+                var uriRunner = UriRunner.Create(uriIndex, uri, _httpClient, progress);
+                var uriCollectedDataFuture = uriRunner.RunAsync(cancellationToken);
+                var uriCollectedData = await uriCollectedDataFuture.ConfigureAwait(false);
+                var histogramTask = BuildThenSaveHistogramsAsync(uriCollectedData, cancellationToken);
+                await histogramTask.ConfigureAwait(false);
+                await WriteUriCollectedDataAsync(uriCollectedData, cancellationToken).ConfigureAwait(false);
+                uriCollectedDataset[uriIndex] = uriCollectedData;
             }
             catch (OperationCanceledException) { }
+            catch (Exception exception)
+            {
+                var message = InAppMessage.FromException(exception);
+                var task = _messageChannelWriter.WriteAsync(message, cancellationToken);
+                await task.ConfigureAwait(false);
+            }
             finally
             {
-                LogProcessedUrl(uri.AbsoluteUri, uriIndexCopy, _uris.Count);
+                LogProcessedUrl(uri, uriIndex, _uris.Count);
             }
         }
-    }
 
-    private async ValueTask ConsumeBodyAsync(
-        RequestCollectedData requestCollectedData, CancellationToken cancellationToken)
-    {
-        Task endingTimestampTask = requestCollectedData.EndingTimestampFuture;
-        await endingTimestampTask.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
-        Task responseTask = requestCollectedData.ResponseFuture;
-        await responseTask.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
-        var requests = _uriCollectedDataset[requestCollectedData.UriIndex].Requests;
-        requests.Add(requestCollectedData);
-        if (requestCollectedData.ResponseFuture.Exception is { } exception)
+        uriCollectedDataset.AsSpan().Sort(UriCollectedDataComparer.Instance);
+        return new(uriCollectedDataset);
+
+        void HandleProgressChanged(UriProgressReport report)
         {
-            var exceptionsWritten = _exceptionsWritten[requestCollectedData.UriIndex];
-            var innerExceptions = exception.Flatten().InnerExceptions;
-            foreach (var innerException in innerExceptions)
+            if (report.Exception is { } exception)
             {
-                if (!exceptionsWritten.TryAdd(innerException, true))
-                    continue;
-                var writeTask =
-                    _messageChannelWriter.WriteAsync(InAppMessage.FromException(innerException), cancellationToken);
-                await writeTask.ConfigureAwait(false);
+                _ = _messageChannelWriter.TryWrite(InAppMessage.FromException(exception));
+                return;
             }
-        }
-    }
 
-    private ValueTask ProduceBodyAsync(Attempt attempt, CancellationToken cancellationToken)
-    {
-        if (cancellationToken.IsCancellationRequested)
-            return ValueTask.CompletedTask;
-        (int uriIndex, var uri, int attemptIndex) = attempt;
-        long startingTimestamp = Stopwatch.GetTimestamp();
-        TaskCompletionSource<long> endingTimestampPromise = new();
-        var responseFuture = GetAsync(uri, endingTimestampPromise, cancellationToken);
-        RequestCollectedData requestCollectedData = new(
-            uriIndex, uri, attemptIndex, startingTimestamp, endingTimestampPromise.Task, responseFuture);
-        return RequestChannelWriter.WriteAsync(requestCollectedData, cancellationToken);
-    }
-
-    private async Task<HttpResponseMessage> GetAsync(
-        Uri uri, TaskCompletionSource<long> endingTimestampPromise, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var responseFuture = _httpClient.GetAsync(
-                uri, HttpCompletionOption.ResponseContentRead, cancellationToken);
-            // “Because of bugs in the BIOS or the Hardware Abstraction Layer (HAL),
-            // you can get different timing results on different processors.”
-            // — https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.stopwatch#remarks
-            return await responseFuture.ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
-        }
-        finally
-        {
-            endingTimestampPromise.SetResult(Stopwatch.GetTimestamp());
+            _ = Interlocked.Increment(ref attemptCount);
+            double progressValue = attemptCount / totalAttemptCount;
+            _progress.Report(progressValue);
         }
     }
 
@@ -220,5 +131,19 @@ internal sealed partial class ProjectRunner
         }
 
         return uris;
+    }
+
+    private async Task WriteUriCollectedDataAsync(
+        UriCollectedData uriCollectedData, CancellationToken cancellationToken)
+    {
+        (int uriIndex, var uri, var metrics) = uriCollectedData;
+        StringBuilder builder = new();
+        builder.Append(P, $"#{uriIndex} {uri}");
+        if (metrics is not null)
+            _ = metrics.PrintMembers(builder.AppendLine());
+        var level = metrics is null ? LogLevel.Warning : LogLevel.Information;
+        var task = _messageChannelWriter.WriteAsync(
+            InAppMessage.FromMessage(builder.ToString(), level), cancellationToken);
+        await task.ConfigureAwait(false);
     }
 }

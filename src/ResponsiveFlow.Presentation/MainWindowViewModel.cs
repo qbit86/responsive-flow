@@ -1,17 +1,22 @@
 using System;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Threading;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 namespace ResponsiveFlow;
 
-public sealed partial class MainWindowViewModel : IDisposable
+public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
 {
     private readonly MainModel _model;
     private readonly AsyncRelayCommand _runCommand;
     private readonly CancellationTokenSource _stoppingCts = new();
+    private Visibility _progressBarVisibility = Visibility.Collapsed;
+    private double _progressValue;
 
     public MainWindowViewModel(MainModel model)
     {
@@ -19,15 +24,42 @@ public sealed partial class MainWindowViewModel : IDisposable
 
         _model = model;
         _runCommand = new AsyncRelayCommand(ExecuteRunAsync, CanExecuteRun);
+        _model.ProgressChanged += OnModelProgressChanged;
     }
+
+    private static PropertyChangedEventArgs ProgressValueChangedEventArgs { get; } = new(nameof(ProgressValue));
 
     public IAsyncRelayCommand RunCommand => _runCommand;
 
     public string Title { get; } = CreateTitle();
 
+    public Visibility ProgressBarVisibility
+    {
+        get => _progressBarVisibility;
+        private set => SetProperty(ref _progressBarVisibility, value);
+    }
+
+    public double ProgressValue
+    {
+        get => _progressValue;
+        private set
+        {
+            if (_progressValue.Equals(value))
+                return;
+            _progressValue = value;
+            OnPropertyChanged(ProgressValueChangedEventArgs);
+        }
+    }
+
     public ObservableCollection<InAppMessageViewModel> Messages { get; } = [];
 
-    public void Dispose() => _stoppingCts.Dispose();
+    public void Dispose()
+    {
+        _model.ProgressChanged -= OnModelProgressChanged;
+        _stoppingCts.Dispose();
+    }
+
+    private void OnModelProgressChanged(object? _, double e) => ProgressValue = e;
 
     public void Run() => _ = RunUpdateLoopAsync(_stoppingCts.Token);
 
@@ -59,6 +91,7 @@ public sealed partial class MainWindowViewModel : IDisposable
     {
         try
         {
+            ProgressBarVisibility = Visibility.Visible;
             var collectedDataFuture = _model.RunAsync(cancellationToken);
             _ = await collectedDataFuture.ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
         }

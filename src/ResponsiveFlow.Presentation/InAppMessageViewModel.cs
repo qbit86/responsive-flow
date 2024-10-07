@@ -26,7 +26,7 @@ public sealed class InAppMessageViewModel
         Brush backgroundBrush = inAppMessage.Level switch
         {
             LogLevel.Information => Brushes.Honeydew,
-            LogLevel.Warning => Brushes.NavajoWhite,
+            LogLevel.Warning => Brushes.Beige,
             LogLevel.Error or LogLevel.Critical => Brushes.LavenderBlush,
             _ => Brushes.Transparent
         };

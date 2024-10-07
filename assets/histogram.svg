@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<svg version="2" width="656" height="304.0000000000002" xmlns="http://www.w3.org/2000/svg">
+  <style>
+text {
+  font-family: sans-serif;
+}
+</style>
+  <rect width="119.06976744186046" height="24.00000000000001" x="128" y="8" fill="LightSkyBlue" />
+  <text text-anchor="end" x="120" y="24">[13.31, 19.96)</text>
+  <rect width="512" height="24.000000000000025" x="128" y="32.000000000000014" fill="SkyBlue" />
+  <text text-anchor="end" x="120" y="48.000000000000014">[19.96, 26.61)</text>
+  <rect width="190.51162790697674" height="24.000000000000025" x="128" y="56.00000000000004" fill="LightSkyBlue" />
+  <text text-anchor="end" x="120" y="72.00000000000004">[26.61, 33.26)</text>
+  <rect width="59.53488372093023" height="23.999999999999996" x="128" y="80.00000000000007" fill="SkyBlue" />
+  <text text-anchor="end" x="120" y="96.00000000000007">[33.26, 39.92)</text>
+  <rect width="71.44186046511628" height="24.000000000000025" x="128" y="104.00000000000007" fill="LightSkyBlue" />
+  <text text-anchor="end" x="120" y="120.00000000000007">[39.92, 46.57)</text>
+  <rect width="83.34883720930233" height="24.000000000000025" x="128" y="128.00000000000009" fill="SkyBlue" />
+  <text text-anchor="end" x="120" y="144.00000000000009">[46.57, 53.22)</text>
+  <rect width="23.813953488372093" height="24.000000000000025" x="128" y="152.0000000000001" fill="LightSkyBlue" />
+  <text text-anchor="end" x="120" y="168.0000000000001">[53.22, 59.87)</text>
+  <rect width="35.72093023255814" height="24.000000000000025" x="128" y="176.00000000000014" fill="SkyBlue" />
+  <text text-anchor="end" x="120" y="192.00000000000014">[59.87, 66.53)</text>
+  <rect width="59.53488372093023" height="23.999999999999996" x="128" y="200.00000000000017" fill="LightSkyBlue" />
+  <text text-anchor="end" x="120" y="216.00000000000017">[66.53, 73.18)</text>
+  <rect width="1" height="23.999999999999996" x="128" y="224.00000000000017" fill="SkyBlue" />
+  <text text-anchor="end" x="120" y="240.00000000000017">[73.18, 79.83)</text>
+  <rect width="1" height="24.00000000000005" x="128" y="248.00000000000017" fill="LightSkyBlue" />
+  <text text-anchor="end" x="120" y="264.00000000000017">[79.83, 86.48)</text>
+  <rect width="35.72093023255814" height="23.999999999999996" x="128" y="272.0000000000002" fill="SkyBlue" />
+  <text text-anchor="end" x="120" y="288.0000000000002">[86.48, 93.14]</text>
+</svg>

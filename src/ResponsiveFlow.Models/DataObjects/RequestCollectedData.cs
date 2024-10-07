@@ -11,9 +11,11 @@ public sealed record RequestCollectedData(
     Uri Uri,
     int AttemptIndex,
     long StartingTimestamp,
-    Task<long> EndingTimestampFuture,
+    long EndingTimestamp,
     Task<HttpResponseMessage> ResponseFuture)
 {
+    public TimeSpan Duration() => Stopwatch.GetElapsedTime(StartingTimestamp, EndingTimestamp);
+
     public override string ToString()
     {
         StringBuilder builder = new();
@@ -27,20 +29,11 @@ public sealed record RequestCollectedData(
 
     private bool PrintMembers(StringBuilder builder)
     {
-        builder.Append("UriIndex = ").Append(UriIndex);
-        builder.Append(", Uri = ").Append(Uri);
-        builder.Append(", AttemptIndex = ").Append(AttemptIndex);
-        if (EndingTimestampFuture.IsCompletedSuccessfully)
-        {
-            var elapsedTime = Stopwatch.GetElapsedTime(StartingTimestamp, EndingTimestampFuture.Result);
-            builder.Append(", ElapsedTime = ").Append(elapsedTime.TotalMilliseconds).Append("ms");
-        }
-        else
-        {
-            builder.Append(", StartingTimestamp = ").Append(StartingTimestamp);
-        }
-
-        builder.Append(", ResponseFuture.Status = ").Append(ResponseFuture.Status);
+        builder.Append($"{nameof(UriIndex)} = ").Append(UriIndex);
+        builder.Append($", {nameof(Uri)} = ").Append(Uri);
+        builder.Append($", {nameof(AttemptIndex)} = ").Append(AttemptIndex);
+        builder.Append($", {nameof(Duration)} = ").Append(Duration()).Append("ms");
+        builder.Append($", {nameof(ResponseFuture)}.Status = ").Append(ResponseFuture.Status);
         return true;
     }
 }
