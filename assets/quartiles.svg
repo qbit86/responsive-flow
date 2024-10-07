@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<svg version="2" width="656" height="431.13791828123294" xmlns="http://www.w3.org/2000/svg">
+  <style>
+text {
+  font-family: sans-serif;
+}
+</style>
+  <rect width="511.99999999999994" height="23.999999999999996" x="128" y="8" fill="PaleGreen" />
+  <text text-anchor="end" x="120" y="24">[17.30, 21.48)</text>
+  <rect width="479.3745248229855" height="25.633402201624047" x="128" y="31.999999999999996" fill="LightGreen" />
+  <text text-anchor="end" x="120" y="48">[21.48, 25.94)</text>
+  <rect width="140.6814925836197" height="87.34624415998525" x="128" y="57.633402201624044" fill="PaleGreen" />
+  <text text-anchor="end" x="120" y="73.63340220162405">[25.94, 41.13)</text>
+  <rect width="44.176288252001825" height="278.15827191962364" x="128" y="144.9796463616093" fill="LightGreen" />
+  <text text-anchor="end" x="120" y="160.9796463616093">[41.13, 89.50]</text>
+</svg>
