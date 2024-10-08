@@ -16,25 +16,29 @@ internal sealed class UriCollectedDataComparer : IComparer<UriCollectedData>
 
     public int Compare(UriCollectedData? x, UriCollectedData? y)
     {
-        if (ReferenceEquals(x, y))
+        var xSample = x?.Sample;
+        var ySample = y?.Sample;
+        if (ReferenceEquals(xSample, ySample))
             return 0;
-        if (y is null)
+        if (ySample is null)
             return -1;
-        if (x is null)
+        if (xSample is null)
             return 1;
 
-        int heuristicComparison = MetricsHeuristicComparer.Instance.Compare(x.Metrics, y.Metrics);
+        var xMetrics = x!.Metrics;
+        var yMetrics = y!.Metrics;
+        int heuristicComparison = MetricsHeuristicComparer.Instance.Compare(xMetrics, yMetrics);
         if (heuristicComparison != 0)
             return heuristicComparison;
 
-        var sampleX = x.Sample!;
-        var sampleY = y.Sample!;
-        var comparisonResult = _test.Perform(sampleX, sampleY, Threshold.Zero, SignificanceLevel.P05);
+        var comparisonResult = _test.Perform(xSample, ySample, Threshold.Zero, SignificanceLevel.P05);
         return comparisonResult switch
         {
             ComparisonResult.Lesser => -1,
             ComparisonResult.Greater => 1,
-            _ => x.Metrics!.Median.CompareTo(y.Metrics!.Median)
+            _ => ConservativeEstimate(xMetrics!).CompareTo(ConservativeEstimate(yMetrics!))
         };
     }
+
+    private static double ConservativeEstimate(Metrics metrics) => metrics.Mean + 3.0 * metrics.StandardDeviation;
 }
