@@ -28,6 +28,7 @@
             IsIndeterminate="True"
             Margin="8 0 8 8" />
         <ListView
+            x:Name="MessageListView"
             HorizontalContentAlignment="Stretch"
             Margin="8 0 8 8"
             ItemsSource="{Binding Messages, Mode=OneTime}">
