@@ -1,3 +1,4 @@
 [*Tests.cs]
 dotnet_diagnostic.CA1707.severity = none # Identifiers should not contain underscores
+dotnet_diagnostic.IDE0065.severity = none # 'using' directive placement
 resharper_inconsistent_naming_highlighting = none # InconsistentNaming
