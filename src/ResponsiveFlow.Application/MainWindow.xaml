@@ -8,7 +8,7 @@
         mc:Ignorable="d"
         Height="500" Width="800"
         MinHeight="300" MinWidth="500"
-        Title="{Binding Title, Mode=OneTime}">
+        Title="{Binding Title, Mode=OneWay}">
     <DockPanel LastChildFill="True">
         <Menu DockPanel.Dock="Top" VerticalAlignment="Top">
             <MenuItem Header="_File">

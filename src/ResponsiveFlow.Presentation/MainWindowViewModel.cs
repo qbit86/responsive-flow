@@ -28,6 +28,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     private readonly CancellationTokenSource _stoppingCts = new();
     private Visibility _progressBarVisibility = Visibility.Collapsed;
     private double _progressValue;
+    private string _title = CreateTitle();
 
     public MainWindowViewModel(MainModel model)
     {
@@ -45,8 +46,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public ICommand RunCommand => _runCommand;
 
-    public string Title { get; } = CreateTitle();
-
     public Visibility ProgressBarVisibility
     {
         get => _progressBarVisibility;
@@ -63,6 +62,12 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
             _progressValue = value;
             OnPropertyChanged(ProgressValueChangedEventArgs);
         }
+    }
+
+    public string Title
+    {
+        get => _title;
+        private set => SetProperty(ref _title, value);
     }
 
     public ObservableCollection<InAppMessageViewModel> Messages { get; } = [];
@@ -125,6 +130,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
                 var future = JsonSerializer.DeserializeAsync<ProjectDto>(utf8Json, s_options, cancellationToken);
                 var projectDto = await future.ConfigureAwait(true);
                 _model.SetProject(projectDto);
+                Title = FormatTitle(path);
                 _runCommand.NotifyCanExecuteChanged();
             }
         }
@@ -165,4 +171,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private static string CreateTitle() =>
         TryGetVersion(out string? version) ? $"{nameof(ResponsiveFlow)} v{version}" : nameof(ResponsiveFlow);
+
+    private static string FormatTitle(string path) => $"{nameof(ResponsiveFlow)} - {path}";
 }
