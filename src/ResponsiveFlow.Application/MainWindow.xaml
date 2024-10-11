@@ -10,6 +10,11 @@
         MinHeight="300" MinWidth="500"
         Title="{Binding Title, Mode=OneTime}">
     <DockPanel LastChildFill="True">
+        <Menu DockPanel.Dock="Top" VerticalAlignment="Top">
+            <MenuItem Header="_File">
+                <MenuItem Header="_Open…" Command="{Binding OpenCommand}" />
+            </MenuItem>
+        </Menu>
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
             <Button Margin="8" MinHeight="32" MinWidth="64" Command="{Binding RunCommand}">Run</Button>
         </StackPanel>
