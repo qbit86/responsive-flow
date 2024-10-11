@@ -1,18 +1,29 @@
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Win32;
 
 namespace ResponsiveFlow;
 
 public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
 {
+    private static readonly JsonSerializerOptions s_options = new()
+    {
+        AllowTrailingCommas = true,
+        PropertyNameCaseInsensitive = true
+    };
+
     private readonly MainModel _model;
+    private readonly AsyncRelayCommand _openCommand;
     private readonly AsyncRelayCommand _runCommand;
     private readonly CancellationTokenSource _stoppingCts = new();
     private Visibility _progressBarVisibility = Visibility.Collapsed;
@@ -23,13 +34,16 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         ArgumentNullException.ThrowIfNull(model);
 
         _model = model;
+        _openCommand = new AsyncRelayCommand(ExecuteOpenAsync, CanExecuteOpen);
         _runCommand = new AsyncRelayCommand(ExecuteRunAsync, CanExecuteRun);
         _model.ProgressChanged += OnModelProgressChanged;
     }
 
     private static PropertyChangedEventArgs ProgressValueChangedEventArgs { get; } = new(nameof(ProgressValue));
 
-    public IAsyncRelayCommand RunCommand => _runCommand;
+    public ICommand OpenCommand => _openCommand;
+
+    public ICommand RunCommand => _runCommand;
 
     public string Title { get; } = CreateTitle();
 
@@ -87,10 +101,49 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         }
     }
 
+    private async Task ExecuteOpenAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            OpenFileDialog dialog = new()
+            {
+                AddToRecent = true,
+                CheckFileExists = true,
+                DefaultExt = ".json",
+                Filter = "JSON documents|*.json",
+                ValidateNames = true
+            };
+
+            bool? result = dialog.ShowDialog();
+            if (!result.GetValueOrDefault())
+                return;
+
+            string path = dialog.FileName;
+            Stream utf8Json = File.OpenRead(path);
+            await using (utf8Json)
+            {
+                var future = JsonSerializer.DeserializeAsync<ProjectDto>(utf8Json, s_options, cancellationToken);
+                var projectDto = await future.ConfigureAwait(true);
+                _model.SetProject(projectDto);
+                _runCommand.NotifyCanExecuteChanged();
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception exception)
+        {
+            var message = InAppMessage.FromException(exception);
+            var messageViewModel = InAppMessageViewModel.Create(message);
+            Messages.Add(messageViewModel);
+        }
+    }
+
+    private bool CanExecuteOpen() => _runCommand.ExecutionTask is not { Status: TaskStatus.Running };
+
     private async Task ExecuteRunAsync(CancellationToken cancellationToken)
     {
         try
         {
+            _openCommand.NotifyCanExecuteChanged();
             ProgressBarVisibility = Visibility.Visible;
             var collectedDataFuture = _model.RunAsync(cancellationToken);
             _ = await collectedDataFuture.ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
@@ -102,9 +155,13 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
             var messageViewModel = InAppMessageViewModel.Create(message);
             Messages.Add(messageViewModel);
         }
+        finally
+        {
+            _openCommand.NotifyCanExecuteChanged();
+        }
     }
 
-    private bool CanExecuteRun() => _runCommand.ExecutionTask is null;
+    private bool CanExecuteRun() => _runCommand.ExecutionTask is null && _model.CanRun();
 
     private static string CreateTitle() =>
         TryGetVersion(out string? version) ? $"{nameof(ResponsiveFlow)} v{version}" : nameof(ResponsiveFlow);
