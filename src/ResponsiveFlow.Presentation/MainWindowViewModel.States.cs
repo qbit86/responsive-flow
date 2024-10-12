@@ -76,6 +76,8 @@ public sealed partial class MainWindowViewModel
         {
             base.OnEntered(context, ev, oldState);
             context.OnPropertyChanged(TitleChangedEventArgs);
+            if (oldState is ProjectLoadedState)
+                context.Messages.Clear();
         }
     }
 
