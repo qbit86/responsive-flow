@@ -23,6 +23,8 @@ public sealed partial class MainWindowViewModel
         public void OnEntered(MainWindowViewModel context, IEvent ev, State oldState) { }
     }
 
+    internal abstract record ProjectLoadedState(ProjectDto Project) : State;
+
     internal sealed record ProjectNotLoadedState : State
     {
         internal static ProjectNotLoadedState Instance { get; } = new();
@@ -46,7 +48,7 @@ public sealed partial class MainWindowViewModel
         };
     }
 
-    internal sealed record ReadyToRunState(string ProjectPath, ProjectDto Project) : State
+    internal sealed record ReadyToRunState(string ProjectPath, ProjectDto Project) : ProjectLoadedState(Project)
     {
         public override bool TryCreateNewState(
             MainWindowViewModel context, IEvent ev, [MaybeNullWhen(false)] out State newState) => ev switch
@@ -57,7 +59,7 @@ public sealed partial class MainWindowViewModel
         };
     }
 
-    internal sealed record RunningState(string ProjectPath, ProjectDto Project) : State
+    internal sealed record RunningState(string ProjectPath, ProjectDto Project) : ProjectLoadedState(Project)
     {
         public override bool TryCreateNewState(
             MainWindowViewModel context, IEvent ev, [MaybeNullWhen(false)] out State newState) => ev switch
@@ -68,7 +70,7 @@ public sealed partial class MainWindowViewModel
         };
     }
 
-    internal sealed record CompletedState(string ProjectPath, ProjectDto Project) : State
+    internal sealed record CompletedState(string ProjectPath, ProjectDto Project) : ProjectLoadedState(Project)
     {
         public override bool TryCreateNewState(
             MainWindowViewModel context, IEvent ev, [MaybeNullWhen(false)] out State newState) => ev switch
