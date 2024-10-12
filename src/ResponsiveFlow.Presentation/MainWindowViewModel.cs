@@ -1,6 +1,5 @@
 using System;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.IO;
 using System.Text.Json;
 using System.Threading;
@@ -10,6 +9,7 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Machinery;
 using Microsoft.Win32;
 
 namespace ResponsiveFlow;
@@ -25,10 +25,9 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     private readonly MainModel _model;
     private readonly AsyncRelayCommand _openCommand;
     private readonly AsyncRelayCommand _runCommand;
+    private readonly StateMachine<MainWindowViewModel, IEvent, State> _stateMachine;
     private readonly CancellationTokenSource _stoppingCts = new();
-    private Visibility _progressBarVisibility = Visibility.Collapsed;
     private double _progressValue;
-    private string _title = CreateTitle();
 
     public MainWindowViewModel(MainModel model)
     {
@@ -38,19 +37,18 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         _openCommand = new AsyncRelayCommand(ExecuteOpenAsync, CanExecuteOpen);
         _runCommand = new AsyncRelayCommand(ExecuteRunAsync, CanExecuteRun);
         _model.ProgressChanged += OnModelProgressChanged;
+        _stateMachine = StateMachine<IEvent>.Create(this, (State)ProjectNotLoadedState.Instance);
     }
-
-    private static PropertyChangedEventArgs ProgressValueChangedEventArgs { get; } = new(nameof(ProgressValue));
 
     public ICommand OpenCommand => _openCommand;
 
     public ICommand RunCommand => _runCommand;
 
-    public Visibility ProgressBarVisibility
+    public Visibility ProgressBarVisibility => _stateMachine.CurrentState switch
     {
-        get => _progressBarVisibility;
-        private set => SetProperty(ref _progressBarVisibility, value);
-    }
+        ReadyToRunState or RunningState or CompletedState => Visibility.Visible,
+        _ => Visibility.Collapsed
+    };
 
     public double ProgressValue
     {
@@ -64,11 +62,24 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         }
     }
 
-    public string Title
+    public string StateStatus => _stateMachine.CurrentState switch
     {
-        get => _title;
-        private set => SetProperty(ref _title, value);
-    }
+        ProjectNotLoadedState => "Not loaded",
+        LoadingState => "Loading",
+        ReadyToRunState => "Ready to run",
+        RunningState => "Running",
+        CompletedState => "Completed",
+        _ => string.Empty
+    };
+
+    public string Title => _stateMachine.CurrentState switch
+    {
+        LoadingState state => FormatTitle(state.ProjectPath),
+        ReadyToRunState state => FormatTitle(state.ProjectPath),
+        RunningState state => FormatTitle(state.ProjectPath),
+        CompletedState state => FormatTitle(state.ProjectPath),
+        _ => CreateTitle()
+    };
 
     public ObservableCollection<InAppMessageViewModel> Messages { get; } = [];
 
@@ -104,6 +115,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
             }
             catch (OperationCanceledException) { }
         }
+
+        _ = _stateMachine.TryProcessEvent(CancelEvent.Instance);
     }
 
     private async Task ExecuteOpenAsync(CancellationToken cancellationToken)
@@ -127,47 +140,54 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
             Stream utf8Json = File.OpenRead(path);
             await using (utf8Json)
             {
+                _ = _stateMachine.TryProcessEvent(new OpenEvent(path));
                 var future = JsonSerializer.DeserializeAsync<ProjectDto>(utf8Json, s_options, cancellationToken);
                 var projectDto = await future.ConfigureAwait(true);
+                IEvent ev = projectDto is null ? CancelEvent.Instance : new CompleteEvent(projectDto);
+                _ = _stateMachine.TryProcessEvent(ev);
                 _model.SetProject(projectDto);
-                Title = FormatTitle(path);
-                _runCommand.NotifyCanExecuteChanged();
             }
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+            _ = _stateMachine.TryProcessEvent(CancelEvent.Instance);
+        }
         catch (Exception exception)
         {
+            _ = _stateMachine.TryProcessEvent(CancelEvent.Instance);
             var message = InAppMessage.FromException(exception);
             var messageViewModel = InAppMessageViewModel.Create(message);
             Messages.Add(messageViewModel);
         }
     }
 
-    private bool CanExecuteOpen() => _runCommand.ExecutionTask is not { Status: TaskStatus.Running };
+    private bool CanExecuteOpen() =>
+        _stateMachine.CurrentState is ProjectNotLoadedState or ReadyToRunState or CompletedState;
 
     private async Task ExecuteRunAsync(CancellationToken cancellationToken)
     {
         try
         {
-            _openCommand.NotifyCanExecuteChanged();
-            ProgressBarVisibility = Visibility.Visible;
+            _ = _stateMachine.TryProcessEvent(RunEvent.Instance);
             var collectedDataFuture = _model.RunAsync(cancellationToken);
             _ = await collectedDataFuture.ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
+            if (_stateMachine.CurrentState is ProjectLoadedState { Project: var project })
+                _ = _stateMachine.TryProcessEvent(new CompleteEvent(project));
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+            _ = _stateMachine.TryProcessEvent(CancelEvent.Instance);
+        }
         catch (Exception exception)
         {
+            _ = _stateMachine.TryProcessEvent(CancelEvent.Instance);
             var message = InAppMessage.FromException(exception);
             var messageViewModel = InAppMessageViewModel.Create(message);
             Messages.Add(messageViewModel);
         }
-        finally
-        {
-            _openCommand.NotifyCanExecuteChanged();
-        }
     }
 
-    private bool CanExecuteRun() => _runCommand.ExecutionTask is null && _model.CanRun();
+    private bool CanExecuteRun() => _stateMachine.CurrentState is ReadyToRunState or CompletedState;
 
     private static string CreateTitle() =>
         TryGetVersion(out string? version) ? $"{nameof(ResponsiveFlow)} v{version}" : nameof(ResponsiveFlow);
