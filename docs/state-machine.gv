@@ -1,0 +1,19 @@
+digraph {
+    node [fontname="Helvetica" shape=box]
+    ProjectNotLoaded
+    Loading
+    ReadyToRun
+    Running
+    Completed
+
+    edge [fontname="Times-Italic" fontsize=10]
+    ProjectNotLoaded -> Loading [label=Open]
+    Loading -> ProjectNotLoaded [label=Cancel]
+    Loading -> ReadyToRun [label=Complete]
+    ReadyToRun -> Loading [label=Open]
+    ReadyToRun -> Running [label=Run]
+    Running -> ReadyToRun [label=Cancel]
+    Running -> Completed [label=Complete]
+    Completed -> Running [label=Run]
+    Completed -> Loading [label=Open]
+}
