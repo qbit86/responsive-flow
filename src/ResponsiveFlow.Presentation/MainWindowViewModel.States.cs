@@ -20,7 +20,7 @@ public sealed partial class MainWindowViewModel
 
         public void OnEntering(MainWindowViewModel context, IEvent ev, State oldState) { }
 
-        public void OnEntered(MainWindowViewModel context, IEvent ev, State oldState)
+        public virtual void OnEntered(MainWindowViewModel context, IEvent ev, State oldState)
         {
             context._openCommand.NotifyCanExecuteChanged();
             context._runCommand.NotifyCanExecuteChanged();
@@ -62,6 +62,12 @@ public sealed partial class MainWindowViewModel
             RunEvent => Some(new RunningState(ProjectPath, Project), out newState),
             _ => None(out newState)
         };
+
+        public override void OnEntered(MainWindowViewModel context, IEvent ev, State oldState)
+        {
+            base.OnEntered(context, ev, oldState);
+            context.OnPropertyChanged(nameof(ProgressBarVisibility));
+        }
     }
 
     internal sealed record RunningState(string ProjectPath, ProjectDto Project) : ProjectLoadedState(Project)

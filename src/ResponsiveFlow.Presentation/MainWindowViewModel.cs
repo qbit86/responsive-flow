@@ -28,7 +28,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     private readonly AsyncRelayCommand _runCommand;
     private readonly StateMachine<MainWindowViewModel, IEvent, State> _stateMachine;
     private readonly CancellationTokenSource _stoppingCts = new();
-    private Visibility _progressBarVisibility = Visibility.Collapsed;
     private double _progressValue;
     private string _title = CreateTitle();
 
@@ -49,11 +48,11 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public ICommand RunCommand => _runCommand;
 
-    public Visibility ProgressBarVisibility
+    public Visibility ProgressBarVisibility => _stateMachine.CurrentState switch
     {
-        get => _progressBarVisibility;
-        private set => SetProperty(ref _progressBarVisibility, value);
-    }
+        ReadyToRunState or RunningState or CompletedState => Visibility.Visible,
+        _ => Visibility.Collapsed
+    };
 
     public double ProgressValue
     {
@@ -174,7 +173,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         {
             _ = _stateMachine.TryProcessEvent(RunEvent.Instance);
             _openCommand.NotifyCanExecuteChanged();
-            ProgressBarVisibility = Visibility.Visible;
             var collectedDataFuture = _model.RunAsync(cancellationToken);
             _ = await collectedDataFuture.ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
             if (_stateMachine.CurrentState is ProjectLoadedState { Project: var project })
