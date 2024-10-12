@@ -1,6 +1,5 @@
 using System;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using Microsoft.Extensions.Logging;
 
@@ -32,29 +31,10 @@ public sealed class InAppMessage
         return new(level, message, null);
     }
 
-    public static InAppMessage FromExceptionAndMessage(
-        Exception exception, string? message = null, LogLevel level = LogLevel.Error)
-    {
-        ArgumentNullException.ThrowIfNull(exception);
-        return new(level, message, exception);
-    }
-
     public static InAppMessage FromException(Exception exception, LogLevel level = LogLevel.Error)
     {
         ArgumentNullException.ThrowIfNull(exception);
         return new(level, null, exception);
-    }
-
-    public bool TryGetMessage([NotNullWhen(true)] out string? message)
-    {
-        message = Message;
-        return message is not null;
-    }
-
-    public bool TryGetException([NotNullWhen(true)] out Exception? exception)
-    {
-        exception = Exception;
-        return exception is not null;
     }
 
     public override string ToString()
