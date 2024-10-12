@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace ResponsiveFlow;
 
@@ -17,22 +16,22 @@ public sealed partial class MainModel
     private readonly ILoggerFactory _loggerFactory;
     private readonly Channel<InAppMessage> _messageChannel;
     private readonly Progress<double> _progress = new();
-    private readonly ProjectDto _projectDto;
+    private ProjectDto? _projectDto;
 
-    public MainModel(IOptions<ProjectDto> projectDto, HttpClient httpClient, ILoggerFactory loggerFactory)
+    public MainModel(HttpClient httpClient, ILoggerFactory loggerFactory)
     {
-        ArgumentNullException.ThrowIfNull(projectDto);
         ArgumentNullException.ThrowIfNull(httpClient);
         ArgumentNullException.ThrowIfNull(loggerFactory);
 
         _messageChannel = Channel.CreateUnbounded<InAppMessage>(new UnboundedChannelOptions { SingleReader = true });
         _logger = loggerFactory.CreateLogger<MainModel>();
-        _projectDto = projectDto.Value;
         _httpClient = httpClient;
         _loggerFactory = loggerFactory;
     }
 
     public ChannelReader<InAppMessage> MessageChannelReader => _messageChannel.Reader;
+
+    public void SetProject(ProjectDto? value) => _projectDto = value;
 
     public event EventHandler<double> ProgressChanged
     {
@@ -40,10 +39,18 @@ public sealed partial class MainModel
         remove => _progress.ProgressChanged -= value;
     }
 
-    public async Task<ProjectReportDto> RunAsync(CancellationToken cancellationToken)
+    public Task<ProjectReportDto> RunAsync(CancellationToken cancellationToken)
+    {
+        if (_projectDto is null)
+            return Task.FromCanceled<ProjectReportDto>(CancellationToken.None);
+
+        return RunUncheckedAsync(cancellationToken);
+    }
+
+    private async Task<ProjectReportDto> RunUncheckedAsync(CancellationToken cancellationToken)
     {
         var projectRunner = ProjectRunner.Create(
-            _projectDto, _httpClient, _messageChannel.Writer, _progress, _loggerFactory);
+            _projectDto!, _httpClient, _messageChannel.Writer, _progress, _loggerFactory);
         LogProcessingProject(projectRunner.OutputDirectory);
         try
         {

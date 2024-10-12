@@ -3,9 +3,10 @@ using Perfolizer.Mathematics.SignificanceTesting;
 using Perfolizer.Mathematics.SignificanceTesting.MannWhitney;
 using Perfolizer.Metrology;
 using Xunit;
-using TheoryData = Xunit.TheoryData<double[], double[], double, Perfolizer.Mathematics.Common.ComparisonResult>;
 
 namespace ResponsiveFlow;
+
+using TheoryData = TheoryData<double[], double[], double, ComparisonResult>;
 
 public sealed class DistributionComparisonTests
 {

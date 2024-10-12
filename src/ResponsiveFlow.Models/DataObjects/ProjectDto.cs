@@ -30,9 +30,9 @@ public sealed class ProjectDto
 
     private bool PrintMembers(StringBuilder builder)
     {
-        builder.Append("Urls.Count = ").Append(Urls?.Length ?? 0);
+        builder.Append($"{nameof(Urls)}.Count = ").Append((Urls?.Length).GetValueOrDefault());
         if (OutputDir is { } outputDir)
-            builder.Append(", OutputDir = ").Append(outputDir);
+            builder.Append($", {nameof(OutputDir)} = ").Append(outputDir);
         return true;
     }
 }
