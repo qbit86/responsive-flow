@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Windows;
 using System.Windows.Controls;
 
 namespace ResponsiveFlow;
