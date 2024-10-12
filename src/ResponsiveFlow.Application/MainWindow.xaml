@@ -11,9 +11,8 @@
         Title="{Binding Title, Mode=OneWay}">
     <DockPanel LastChildFill="True">
         <Menu DockPanel.Dock="Top" Margin="8" VerticalAlignment="Top">
-            <MenuItem Header="_File">
-                <MenuItem Header="_Open…" Command="{Binding OpenCommand}" />
-            </MenuItem>
+            <MenuItem Header="_Open…" Command="{Binding OpenCommand}" />
+            <MenuItem Header="_Run" Command="{Binding RunCommand}" />
         </Menu>
         <StatusBar DockPanel.Dock="Bottom" Margin="8 0 8 8">
             <StatusBarItem>
@@ -27,9 +26,6 @@
                     IsIndeterminate="True" />
             </StatusBarItem>
         </StatusBar>
-        <StackPanel DockPanel.Dock="Top" Margin="8 0 8 8" Orientation="Horizontal">
-            <Button MinHeight="32" MinWidth="64" Command="{Binding RunCommand}">Run</Button>
-        </StackPanel>
         <ProgressBar
             DockPanel.Dock="Top"
             Height="12"

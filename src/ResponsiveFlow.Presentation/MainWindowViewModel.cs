@@ -95,6 +95,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
 
     public void Shutdown()
     {
+        _openCommand.Cancel();
         _runCommand.Cancel();
         _stoppingCts.Cancel();
     }
