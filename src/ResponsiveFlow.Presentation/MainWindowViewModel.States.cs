@@ -28,71 +28,54 @@ public sealed partial class MainWindowViewModel
         internal static ProjectNotLoadedState Instance { get; } = new();
 
         public override bool TryCreateNewState(
-            MainWindowViewModel context, IEvent ev, [MaybeNullWhen(false)] out State newState)
+            MainWindowViewModel context, IEvent ev, [MaybeNullWhen(false)] out State newState) => ev switch
         {
-            if (ev is not OpenEvent openEvent)
-                return None(out newState);
-
-            newState = new LoadingState(openEvent.ProjectPath);
-            return true;
-        }
+            OpenEvent openEvent => Some(new LoadingState(openEvent.ProjectPath), out newState),
+            _ => None(out newState)
+        };
     }
 
     internal sealed record LoadingState(string ProjectPath) : State
     {
         public override bool TryCreateNewState(
-            MainWindowViewModel context, IEvent ev, [MaybeNullWhen(false)] out State newState)
+            MainWindowViewModel context, IEvent ev, [MaybeNullWhen(false)] out State newState) => ev switch
         {
-            if (ev is not CompleteEvent completeEvent)
-                return None(out newState);
-
-            newState = new ReadyToRunState(ProjectPath, completeEvent.Project);
-            return true;
-        }
+            CompleteEvent completeEvent => Some(new ReadyToRunState(ProjectPath, completeEvent.Project), out newState),
+            CancelEvent => Some(ProjectNotLoadedState.Instance, out newState),
+            _ => None(out newState)
+        };
     }
 
     internal sealed record ReadyToRunState(string ProjectPath, ProjectDto Project) : State
     {
         public override bool TryCreateNewState(
-            MainWindowViewModel context, IEvent ev, [MaybeNullWhen(false)] out State newState)
+            MainWindowViewModel context, IEvent ev, [MaybeNullWhen(false)] out State newState) => ev switch
         {
-            if (ev is OpenEvent openEvent)
-                return Some(new LoadingState(openEvent.ProjectPath), out newState);
-
-            if (ev is not RunEvent)
-                return None(out newState);
-
-            newState = new RunningState(ProjectPath, Project);
-            return true;
-        }
+            OpenEvent openEvent => Some(new LoadingState(openEvent.ProjectPath), out newState),
+            RunEvent => Some(new RunningState(ProjectPath, Project), out newState),
+            _ => None(out newState)
+        };
     }
 
     internal sealed record RunningState(string ProjectPath, ProjectDto Project) : State
     {
         public override bool TryCreateNewState(
-            MainWindowViewModel context, IEvent ev, [MaybeNullWhen(false)] out State newState)
+            MainWindowViewModel context, IEvent ev, [MaybeNullWhen(false)] out State newState) => ev switch
         {
-            if (ev is not CompleteEvent completeEvent || Project != completeEvent.Project)
-                return None(out newState);
-
-            newState = new CompletedState(ProjectPath, Project);
-            return true;
-        }
+            CompleteEvent completeEvent when Project != completeEvent.Project =>
+                Some(new CompletedState(ProjectPath, Project), out newState),
+            _ => None(out newState)
+        };
     }
 
     internal sealed record CompletedState(string ProjectPath, ProjectDto Project) : State
     {
         public override bool TryCreateNewState(
-            MainWindowViewModel context, IEvent ev, [MaybeNullWhen(false)] out State newState)
+            MainWindowViewModel context, IEvent ev, [MaybeNullWhen(false)] out State newState) => ev switch
         {
-            if (ev is RunEvent)
-                return Some(new RunningState(ProjectPath, Project), out newState);
-
-            if (ev is not OpenEvent openEvent)
-                return None(out newState);
-
-            newState = new LoadingState(openEvent.ProjectPath);
-            return true;
-        }
+            RunEvent => Some(new RunningState(ProjectPath, Project), out newState),
+            OpenEvent openEvent => Some(new LoadingState(openEvent.ProjectPath), out newState),
+            _ => None(out newState)
+        };
     }
 }

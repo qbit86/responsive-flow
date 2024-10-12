@@ -10,3 +10,8 @@ internal sealed class RunEvent : IEvent
 internal sealed record OpenEvent(string ProjectPath) : IEvent;
 
 internal sealed record CompleteEvent(ProjectDto Project) : IEvent;
+
+internal sealed record CancelEvent : IEvent
+{
+    internal static CancelEvent Instance { get; } = new();
+}
