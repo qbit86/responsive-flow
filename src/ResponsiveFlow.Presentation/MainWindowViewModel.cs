@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
 using System.Threading;
@@ -10,6 +11,7 @@ using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Machinery;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Win32;
 
 namespace ResponsiveFlow;
@@ -22,6 +24,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         PropertyNameCaseInsensitive = true
     };
 
+    private readonly IConfiguration _config;
     private readonly MainModel _model;
     private readonly AsyncRelayCommand _openCommand;
     private readonly AsyncRelayCommand _runCommand;
@@ -29,14 +32,16 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     private readonly CancellationTokenSource _stoppingCts = new();
     private double _progressValue;
 
-    public MainWindowViewModel(MainModel model)
+    public MainWindowViewModel(MainModel model, IConfiguration config)
     {
         ArgumentNullException.ThrowIfNull(model);
+        ArgumentNullException.ThrowIfNull(config);
 
+        _config = config;
         _model = model;
+        _model.ProgressChanged += OnModelProgressChanged;
         _openCommand = new AsyncRelayCommand(ExecuteOpenAsync, CanExecuteOpen);
         _runCommand = new AsyncRelayCommand(ExecuteRunAsync, CanExecuteRun);
-        _model.ProgressChanged += OnModelProgressChanged;
         _stateMachine = StateMachine<IEvent>.Create(this, (State)ProjectNotLoadedState.Instance);
     }
 
@@ -102,6 +107,22 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private async Task RunUpdateLoopAsync(CancellationToken stoppingToken)
     {
+        try
+        {
+            if (_config["Project"] is { Length: > 0 } path && !string.IsNullOrWhiteSpace(path))
+                await OpenProjectAsync(path, stoppingToken).ConfigureAwait(true);
+        }
+        catch (Exception exception)
+        {
+            _ = _stateMachine.TryProcessEvent(CancelEvent.Instance);
+            if (exception is not OperationCanceledException)
+            {
+                var message = InAppMessage.FromException(exception);
+                var messageViewModel = InAppMessageViewModel.Create(message);
+                Messages.Add(messageViewModel);
+            }
+        }
+
         // This loop polls the channel for in-app messages from the model
         // and updates the UI by posting the messages to an observable collection bound to the view.
         while (!stoppingToken.IsCancellationRequested)
@@ -138,27 +159,32 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
                 return;
 
             string path = dialog.FileName;
-            Stream utf8Json = File.OpenRead(path);
-            await using (utf8Json)
-            {
-                _ = _stateMachine.TryProcessEvent(new OpenEvent(path));
-                var future = JsonSerializer.DeserializeAsync<ProjectDto>(utf8Json, s_options, cancellationToken);
-                var projectDto = await future.ConfigureAwait(true);
-                IEvent ev = projectDto is null ? CancelEvent.Instance : new CompleteEvent(projectDto);
-                _ = _stateMachine.TryProcessEvent(ev);
-                _model.SetProject(projectDto);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            _ = _stateMachine.TryProcessEvent(CancelEvent.Instance);
+            await OpenProjectAsync(path, cancellationToken).ConfigureAwait(true);
         }
         catch (Exception exception)
         {
             _ = _stateMachine.TryProcessEvent(CancelEvent.Instance);
-            var message = InAppMessage.FromException(exception);
-            var messageViewModel = InAppMessageViewModel.Create(message);
-            Messages.Add(messageViewModel);
+            if (exception is not OperationCanceledException)
+            {
+                var message = InAppMessage.FromException(exception);
+                var messageViewModel = InAppMessageViewModel.Create(message);
+                Messages.Add(messageViewModel);
+            }
+        }
+    }
+
+    private async Task OpenProjectAsync(string path, CancellationToken cancellationToken)
+    {
+        Debug.Assert(!string.IsNullOrWhiteSpace(path));
+        Stream utf8Json = File.OpenRead(path);
+        await using (utf8Json)
+        {
+            _ = _stateMachine.TryProcessEvent(new OpenEvent(path));
+            var future = JsonSerializer.DeserializeAsync<ProjectDto>(utf8Json, s_options, cancellationToken);
+            var projectDto = await future.ConfigureAwait(true);
+            IEvent ev = projectDto is null ? CancelEvent.Instance : new CompleteEvent(projectDto);
+            _ = _stateMachine.TryProcessEvent(ev);
+            _model.SetProject(projectDto);
         }
     }
 
@@ -175,16 +201,15 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
             if (_stateMachine.CurrentState is ProjectLoadedState { Project: var project })
                 _ = _stateMachine.TryProcessEvent(new CompleteEvent(project));
         }
-        catch (OperationCanceledException)
-        {
-            _ = _stateMachine.TryProcessEvent(CancelEvent.Instance);
-        }
         catch (Exception exception)
         {
             _ = _stateMachine.TryProcessEvent(CancelEvent.Instance);
-            var message = InAppMessage.FromException(exception);
-            var messageViewModel = InAppMessageViewModel.Create(message);
-            Messages.Add(messageViewModel);
+            if (exception is not OperationCanceledException)
+            {
+                var message = InAppMessage.FromException(exception);
+                var messageViewModel = InAppMessageViewModel.Create(message);
+                Messages.Add(messageViewModel);
+            }
         }
     }
 
