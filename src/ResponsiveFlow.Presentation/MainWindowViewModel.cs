@@ -184,7 +184,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
             var projectDto = await future.ConfigureAwait(true);
             IEvent ev = projectDto is null ? CancelEvent.Instance : new CompleteEvent(projectDto);
             _ = _stateMachine.TryProcessEvent(ev);
-            _model.SetProject(projectDto);
         }
     }
 
@@ -193,10 +192,13 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private async Task ExecuteRunAsync(CancellationToken cancellationToken)
     {
+        if (_stateMachine.CurrentState is not ProjectLoadedState currentState)
+            return;
+
         try
         {
             _ = _stateMachine.TryProcessEvent(RunEvent.Instance);
-            var collectedDataFuture = _model.RunAsync(cancellationToken);
+            var collectedDataFuture = _model.RunAsync(currentState.Project, cancellationToken);
             _ = await collectedDataFuture.ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
             if (_stateMachine.CurrentState is ProjectLoadedState { Project: var project })
                 _ = _stateMachine.TryProcessEvent(new CompleteEvent(project));

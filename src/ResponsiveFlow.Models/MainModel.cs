@@ -16,7 +16,6 @@ public sealed partial class MainModel
     private readonly ILoggerFactory _loggerFactory;
     private readonly Channel<InAppMessage> _messageChannel;
     private readonly Progress<double> _progress = new();
-    private ProjectDto? _projectDto;
 
     public MainModel(HttpClient httpClient, ILoggerFactory loggerFactory)
     {
@@ -31,26 +30,23 @@ public sealed partial class MainModel
 
     public ChannelReader<InAppMessage> MessageChannelReader => _messageChannel.Reader;
 
-    public void SetProject(ProjectDto? value) => _projectDto = value;
-
     public event EventHandler<double> ProgressChanged
     {
         add => _progress.ProgressChanged += value;
         remove => _progress.ProgressChanged -= value;
     }
 
-    public Task<ProjectReportDto> RunAsync(CancellationToken cancellationToken)
+    public Task<ProjectReportDto> RunAsync(ProjectDto projectDto, CancellationToken cancellationToken)
     {
-        if (_projectDto is null)
-            return Task.FromCanceled<ProjectReportDto>(CancellationToken.None);
+        ArgumentNullException.ThrowIfNull(projectDto);
 
-        return RunUncheckedAsync(cancellationToken);
+        return RunUncheckedAsync(projectDto, cancellationToken);
     }
 
-    private async Task<ProjectReportDto> RunUncheckedAsync(CancellationToken cancellationToken)
+    private async Task<ProjectReportDto> RunUncheckedAsync(ProjectDto projectDto, CancellationToken cancellationToken)
     {
         var projectRunner = ProjectRunner.Create(
-            _projectDto!, _httpClient, _messageChannel.Writer, _progress, _loggerFactory);
+            projectDto, _httpClient, _messageChannel.Writer, _progress, _loggerFactory);
         LogProcessingProject(projectRunner.OutputDirectory);
         try
         {
