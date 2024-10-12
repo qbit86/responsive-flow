@@ -24,7 +24,7 @@ public sealed partial class MainWindowViewModel
         {
             context._openCommand.NotifyCanExecuteChanged();
             context._runCommand.NotifyCanExecuteChanged();
-            context.OnPropertyChanged(nameof(StateStatus));
+            context.OnPropertyChanged(StateStatusChangedEventArgs);
         }
     }
 
@@ -66,7 +66,7 @@ public sealed partial class MainWindowViewModel
         public override void OnEntered(MainWindowViewModel context, IEvent ev, State oldState)
         {
             base.OnEntered(context, ev, oldState);
-            context.OnPropertyChanged(nameof(ProgressBarVisibility));
+            context.OnPropertyChanged(ProgressBarVisibilityChangedEventArgs);
         }
     }
 

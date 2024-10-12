@@ -1,6 +1,5 @@
 using System;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.IO;
 using System.Text.Json;
 using System.Threading;
@@ -41,8 +40,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         _model.ProgressChanged += OnModelProgressChanged;
         _stateMachine = StateMachine<IEvent>.Create(this, (State)ProjectNotLoadedState.Instance);
     }
-
-    private static PropertyChangedEventArgs ProgressValueChangedEventArgs { get; } = new(nameof(ProgressValue));
 
     public ICommand OpenCommand => _openCommand;
 
