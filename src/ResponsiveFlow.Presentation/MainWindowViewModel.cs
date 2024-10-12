@@ -159,7 +159,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
                 return;
 
             string path = dialog.FileName;
-            await OpenProjectAsync(path, cancellationToken).ConfigureAwait(true);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _stoppingCts.Token);
+            await OpenProjectAsync(path, cts.Token).ConfigureAwait(true);
         }
         catch (Exception exception)
         {
@@ -198,7 +199,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         try
         {
             _ = _stateMachine.TryProcessEvent(RunEvent.Instance);
-            var collectedDataFuture = _model.RunAsync(currentState.Project, cancellationToken);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _stoppingCts.Token);
+            var collectedDataFuture = _model.RunAsync(currentState.Project, cts.Token);
             _ = await collectedDataFuture.ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
             if (_stateMachine.CurrentState is ProjectLoadedState { Project: var project })
                 _ = _stateMachine.TryProcessEvent(new CompleteEvent(project));
