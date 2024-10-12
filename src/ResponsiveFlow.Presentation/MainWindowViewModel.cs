@@ -67,6 +67,16 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         }
     }
 
+    public string StateStatus => _stateMachine.CurrentState switch
+    {
+        ProjectNotLoadedState => "Not loaded",
+        LoadingState => "Loading",
+        ReadyToRunState => "Ready to run",
+        RunningState => "Running",
+        CompletedState => "Completed",
+        _ => string.Empty
+    };
+
     public string Title
     {
         get => _title;

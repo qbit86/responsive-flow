@@ -24,6 +24,7 @@ public sealed partial class MainWindowViewModel
         {
             context._openCommand.NotifyCanExecuteChanged();
             context._runCommand.NotifyCanExecuteChanged();
+            context.OnPropertyChanged(nameof(StateStatus));
         }
     }
 
@@ -68,7 +69,7 @@ public sealed partial class MainWindowViewModel
         public override bool TryCreateNewState(
             MainWindowViewModel context, IEvent ev, [MaybeNullWhen(false)] out State newState) => ev switch
         {
-            CompleteEvent completeEvent when Project != completeEvent.Project =>
+            CompleteEvent completeEvent when Project == completeEvent.Project =>
                 Some(new CompletedState(ProjectPath, Project), out newState),
             _ => None(out newState)
         };
