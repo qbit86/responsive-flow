@@ -69,11 +69,11 @@ The output JSON report contains the collected metrics for each input URL.
 
 The application saves the response time histogram in SVG format.
 
-<img src="./assets/histogram.svg" style="background-color: Snow" />
+<img src="./assets/histogram.svg" style="background-color: WhiteSmoke" alt="Histogram" />
 
 Instead of box plots[^BP], it draws a quartile-respectful histogram with four equiprobable variable width bins using the Perfolizer library.
 
-<img src="./assets/quartiles.svg" style="background-color: Snow" />
+<img src="./assets/quartiles.svg" style="background-color: WhiteSmoke" alt="Quartiles" />
 
 (These images have been carefully cherry-picked.
 The usual plots are often uglier, with multiple modes and outliers.)
@@ -94,4 +94,4 @@ The Presentation project provides the viewmodels and defines the UI logic.
 All the asynchronous machinery for making requests and collecting the measurements is placed in the Models project.
 
 [^BP]: I’ve Stopped Using Box Plots. Should You?  
-    https://nightingaledvs.com/ive-stopped-using-box-plots-should-you/
+https://nightingaledvs.com/ive-stopped-using-box-plots-should-you/
