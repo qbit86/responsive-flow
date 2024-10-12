@@ -28,7 +28,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     private readonly StateMachine<MainWindowViewModel, IEvent, State> _stateMachine;
     private readonly CancellationTokenSource _stoppingCts = new();
     private double _progressValue;
-    private string _title = CreateTitle();
 
     public MainWindowViewModel(MainModel model)
     {
@@ -73,11 +72,14 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         _ => string.Empty
     };
 
-    public string Title
+    public string Title => _stateMachine.CurrentState switch
     {
-        get => _title;
-        private set => SetProperty(ref _title, value);
-    }
+        LoadingState state => FormatTitle(state.ProjectPath),
+        ReadyToRunState state => FormatTitle(state.ProjectPath),
+        RunningState state => FormatTitle(state.ProjectPath),
+        CompletedState state => FormatTitle(state.ProjectPath),
+        _ => CreateTitle()
+    };
 
     public ObservableCollection<InAppMessageViewModel> Messages { get; } = [];
 
@@ -144,8 +146,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
                 IEvent ev = projectDto is null ? CancelEvent.Instance : new CompleteEvent(projectDto);
                 _ = _stateMachine.TryProcessEvent(ev);
                 _model.SetProject(projectDto);
-                Title = FormatTitle(path);
-                _runCommand.NotifyCanExecuteChanged();
             }
         }
         catch (OperationCanceledException)
@@ -169,7 +169,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         try
         {
             _ = _stateMachine.TryProcessEvent(RunEvent.Instance);
-            _openCommand.NotifyCanExecuteChanged();
             var collectedDataFuture = _model.RunAsync(cancellationToken);
             _ = await collectedDataFuture.ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
             if (_stateMachine.CurrentState is ProjectLoadedState { Project: var project })
@@ -185,10 +184,6 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
             var message = InAppMessage.FromException(exception);
             var messageViewModel = InAppMessageViewModel.Create(message);
             Messages.Add(messageViewModel);
-        }
-        finally
-        {
-            _openCommand.NotifyCanExecuteChanged();
         }
     }
 

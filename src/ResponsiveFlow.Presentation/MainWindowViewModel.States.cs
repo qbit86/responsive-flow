@@ -12,9 +12,9 @@ public sealed partial class MainWindowViewModel
         public abstract bool TryCreateNewState(MainWindowViewModel context, IEvent ev,
             [MaybeNullWhen(false)] out State newState);
 
-        public void OnExiting(MainWindowViewModel context, IEvent ev, State newState) { }
+        public virtual void OnExiting(MainWindowViewModel context, IEvent ev, State newState) { }
 
-        public void OnExited(MainWindowViewModel context, IEvent ev, State newState) { }
+        public virtual void OnExited(MainWindowViewModel context, IEvent ev, State newState) { }
 
         public void OnRemain(MainWindowViewModel context, IEvent ev) { }
 
@@ -28,7 +28,21 @@ public sealed partial class MainWindowViewModel
         }
     }
 
-    internal abstract record ProjectLoadedState(ProjectDto Project) : State;
+    internal abstract record ProjectLoadedState(ProjectDto Project) : State
+    {
+        public override void OnExited(MainWindowViewModel context, IEvent ev, State newState)
+        {
+            if (newState is not ProjectLoadedState)
+                context.OnPropertyChanged(ProgressBarVisibilityChangedEventArgs);
+        }
+
+        public override void OnEntered(MainWindowViewModel context, IEvent ev, State oldState)
+        {
+            base.OnEntered(context, ev, oldState);
+            if (oldState is not ProjectLoadedState)
+                context.OnPropertyChanged(ProgressBarVisibilityChangedEventArgs);
+        }
+    }
 
     internal sealed record ProjectNotLoadedState : State
     {
@@ -40,6 +54,12 @@ public sealed partial class MainWindowViewModel
             OpenEvent openEvent => Some(new LoadingState(openEvent.ProjectPath), out newState),
             _ => None(out newState)
         };
+
+        public override void OnEntered(MainWindowViewModel context, IEvent ev, State oldState)
+        {
+            base.OnEntered(context, ev, oldState);
+            context.OnPropertyChanged(TitleChangedEventArgs);
+        }
     }
 
     internal sealed record LoadingState(string ProjectPath) : State
@@ -51,6 +71,12 @@ public sealed partial class MainWindowViewModel
             CancelEvent => Some(ProjectNotLoadedState.Instance, out newState),
             _ => None(out newState)
         };
+
+        public override void OnEntered(MainWindowViewModel context, IEvent ev, State oldState)
+        {
+            base.OnEntered(context, ev, oldState);
+            context.OnPropertyChanged(TitleChangedEventArgs);
+        }
     }
 
     internal sealed record ReadyToRunState(string ProjectPath, ProjectDto Project) : ProjectLoadedState(Project)
@@ -62,12 +88,6 @@ public sealed partial class MainWindowViewModel
             RunEvent => Some(new RunningState(ProjectPath, Project), out newState),
             _ => None(out newState)
         };
-
-        public override void OnEntered(MainWindowViewModel context, IEvent ev, State oldState)
-        {
-            base.OnEntered(context, ev, oldState);
-            context.OnPropertyChanged(ProgressBarVisibilityChangedEventArgs);
-        }
     }
 
     internal sealed record RunningState(string ProjectPath, ProjectDto Project) : ProjectLoadedState(Project)
@@ -90,5 +110,8 @@ public sealed partial class MainWindowViewModel
             OpenEvent openEvent => Some(new LoadingState(openEvent.ProjectPath), out newState),
             _ => None(out newState)
         };
+
+        public override void OnExiting(MainWindowViewModel context, IEvent ev, State newState) =>
+            context.ProgressValue = 0.0;
     }
 }
