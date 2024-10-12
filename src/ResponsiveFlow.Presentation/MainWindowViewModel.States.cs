@@ -20,7 +20,11 @@ public sealed partial class MainWindowViewModel
 
         public void OnEntering(MainWindowViewModel context, IEvent ev, State oldState) { }
 
-        public void OnEntered(MainWindowViewModel context, IEvent ev, State oldState) { }
+        public void OnEntered(MainWindowViewModel context, IEvent ev, State oldState)
+        {
+            context._openCommand.NotifyCanExecuteChanged();
+            context._runCommand.NotifyCanExecuteChanged();
+        }
     }
 
     internal abstract record ProjectLoadedState(ProjectDto Project) : State;

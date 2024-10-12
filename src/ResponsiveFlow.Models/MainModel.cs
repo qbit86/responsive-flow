@@ -77,6 +77,4 @@ public sealed partial class MainModel
             LogProcessedProject(projectRunner.OutputDirectory);
         }
     }
-
-    public bool CanRun() => _projectDto is not null;
 }

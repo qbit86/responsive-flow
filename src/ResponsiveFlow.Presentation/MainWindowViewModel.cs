@@ -155,7 +155,8 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         }
     }
 
-    private bool CanExecuteOpen() => _runCommand.ExecutionTask is not { Status: TaskStatus.Running };
+    private bool CanExecuteOpen() =>
+        _stateMachine.CurrentState is ProjectNotLoadedState or ReadyToRunState or CompletedState;
 
     private async Task ExecuteRunAsync(CancellationToken cancellationToken)
     {
@@ -186,7 +187,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         }
     }
 
-    private bool CanExecuteRun() => _runCommand.ExecutionTask is null && _model.CanRun();
+    private bool CanExecuteRun() => _stateMachine.CurrentState is ReadyToRunState or CompletedState;
 
     private static string CreateTitle() =>
         TryGetVersion(out string? version) ? $"{nameof(ResponsiveFlow)} v{version}" : nameof(ResponsiveFlow);
