@@ -36,9 +36,6 @@ internal sealed class SvgHistogramSaver
         string path = Path.Join(OutputDirectory, filenameBuilder.ToString());
         Stream stream = File.OpenWrite(path);
         await using (stream)
-        {
-            var task = doc.SaveAsync(stream, SaveOptions.None, cancellationToken);
-            await task.ConfigureAwait(false);
-        }
+            await doc.SaveAsync(stream, SaveOptions.None, cancellationToken).ConfigureAwait(false);
     }
 }

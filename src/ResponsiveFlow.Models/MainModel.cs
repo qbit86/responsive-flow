@@ -61,9 +61,8 @@ public sealed partial class MainModel
                 var serializerTask = JsonSerializer.SerializeAsync(utf8Json, projectReport,
                     ProjectReportJsonSerializerContext.Default.ProjectReportDto, cancellationToken);
                 await serializerTask.ConfigureAwait(false);
-                var task = _messageChannel.Writer.WriteAsync(
-                    InAppMessage.FromMessage($"Saved report to '{path}'", LogLevel.Debug), cancellationToken);
-                await task.ConfigureAwait(false);
+                var message = InAppMessage.FromMessage($"Saved report to '{path}'", LogLevel.Debug);
+                await _messageChannel.Writer.WriteAsync(message, cancellationToken).ConfigureAwait(false);
             }
 
             return projectReport;
