@@ -12,22 +12,26 @@ namespace ResponsiveFlow;
 internal sealed partial class UriRunner
 {
     internal const int AttemptCount = 100;
-    private const int ConcurrentAttemptCount = 20;
 
     private readonly HttpClient _httpClient;
     private readonly ILogger _logger;
+    private readonly int _maxConcurrentRequests;
     private readonly IProgress<UriProgressReport> _progress;
 
     internal UriRunner(
         int uriIndex,
         Uri uri,
         HttpClient httpClient,
+        int maxConcurrentRequests,
         IProgress<UriProgressReport> progress,
         ILogger logger)
     {
+        Debug.Assert(maxConcurrentRequests >= 1);
+
         UriIndex = uriIndex;
         Uri = uri;
         _httpClient = httpClient;
+        _maxConcurrentRequests = maxConcurrentRequests;
         _progress = progress;
         _logger = logger;
     }
@@ -42,7 +46,7 @@ internal sealed partial class UriRunner
         // We need to use a thread-safe collection because it is not “local” relative to the method that uses it.
         ConcurrentDictionary<Exception, bool> exceptionsWritten = new(ExceptionComparer.Instance);
         List<Task<RequestCollectedData>> futures = new(AttemptCount);
-        using SemaphoreSlim semaphore = new(ConcurrentAttemptCount);
+        using SemaphoreSlim semaphore = new(_maxConcurrentRequests);
         for (int attemptIndex = 0;
              !cancellationToken.IsCancellationRequested && attemptIndex < AttemptCount;
              ++attemptIndex)

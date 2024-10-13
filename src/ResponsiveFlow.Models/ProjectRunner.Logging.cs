@@ -15,4 +15,8 @@ internal sealed partial class ProjectRunner
     [LoggerMessage(EventId = 6, Level = LogLevel.Error,
         Message = "An exception occurred while calling the '{MemberName}' member.")]
     partial void LogException(Exception exception, [CallerMemberName] string memberName = "");
+
+    [LoggerMessage(EventId = 8, Level = LogLevel.Debug,
+        Message = "MaxConcurrentRequests: {MaxConcurrentRequests}")]
+    static partial void LogMaxConcurrentRequests(ILogger logger, int maxConcurrentRequests);
 }

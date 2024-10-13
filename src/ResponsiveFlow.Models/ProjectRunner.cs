@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace ResponsiveFlow;
@@ -15,6 +16,7 @@ internal sealed partial class ProjectRunner
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger _logger;
+    private readonly int _maxConcurrentRequests;
     private readonly ChannelWriter<InAppMessage> _messageChannelWriter;
     private readonly IProgress<double> _progress;
     private readonly Lazy<ILogger> _uriRunnerLogger;
@@ -24,6 +26,7 @@ internal sealed partial class ProjectRunner
         List<Uri> uris,
         string outputDirectory,
         HttpClient httpClient,
+        int maxConcurrentRequests,
         ChannelWriter<InAppMessage> messageChannelWriter,
         IProgress<double> progress,
         ILogger logger,
@@ -32,6 +35,7 @@ internal sealed partial class ProjectRunner
         _uris = uris;
         OutputDirectory = outputDirectory;
         _httpClient = httpClient;
+        _maxConcurrentRequests = maxConcurrentRequests;
         _messageChannelWriter = messageChannelWriter;
         _progress = progress;
         _logger = logger;
@@ -47,6 +51,7 @@ internal sealed partial class ProjectRunner
         HttpClient httpClient,
         ChannelWriter<InAppMessage> messageChannelWriter,
         IProgress<double> progress,
+        IConfiguration config,
         ILoggerFactory loggerFactory)
     {
         var validUris = GetValidUris(projectDto);
@@ -54,8 +59,27 @@ internal sealed partial class ProjectRunner
         string effectiveOutputDirectory = GetOutputDirectoryOrFallback(projectDto, startTime);
         var logger = loggerFactory.CreateLogger<ProjectRunner>();
         Lazy<ILogger> uriRunnerLogger = new(loggerFactory.CreateLogger<UriRunner>);
+        int maxConcurrentRequests = GetMaxConcurrentRequests();
+        WriteMaxConcurrentRequests();
         return new(
-            validUris, effectiveOutputDirectory, httpClient, messageChannelWriter, progress, logger, uriRunnerLogger);
+            validUris, effectiveOutputDirectory, httpClient, maxConcurrentRequests,
+            messageChannelWriter, progress, logger, uriRunnerLogger);
+
+        int GetMaxConcurrentRequests(int defaultMaxConcurrentRequests = 20)
+        {
+            if (config["MaxConcurrentRequests"] is not { Length: > 0 } s)
+                return defaultMaxConcurrentRequests;
+            if (!int.TryParse(s, out int rawMaxConcurrentRequests))
+                return defaultMaxConcurrentRequests;
+            return int.Clamp(rawMaxConcurrentRequests, 1, sbyte.MaxValue);
+        }
+
+        void WriteMaxConcurrentRequests()
+        {
+            LogMaxConcurrentRequests(logger, maxConcurrentRequests);
+            var message = InAppMessage.FromMessage($"MaxConcurrentRequests: {maxConcurrentRequests}", LogLevel.Debug);
+            _ = messageChannelWriter.TryWrite(message);
+        }
     }
 
     internal Task<ProjectCollectedData> RunAsync(CancellationToken cancellationToken) =>
@@ -73,7 +97,8 @@ internal sealed partial class ProjectRunner
             LogProcessingUrl(uri, uriIndex, _uris.Count);
             try
             {
-                UriRunner uriRunner = new(uriIndex, uri, _httpClient, progress, _uriRunnerLogger.Value);
+                UriRunner uriRunner = new(
+                    uriIndex, uri, _httpClient, _maxConcurrentRequests, progress, _uriRunnerLogger.Value);
                 var uriCollectedDataFuture = uriRunner.RunAsync(cancellationToken);
                 var uriCollectedData = await uriCollectedDataFuture.ConfigureAwait(false);
                 await BuildThenSaveHistogramsAsync(uriCollectedData, cancellationToken).ConfigureAwait(false);
