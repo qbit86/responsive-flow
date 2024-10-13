@@ -17,6 +17,7 @@ internal sealed partial class ProjectRunner
     private readonly ILogger _logger;
     private readonly ChannelWriter<InAppMessage> _messageChannelWriter;
     private readonly IProgress<double> _progress;
+    private readonly Lazy<ILogger> _uriRunnerLogger;
     private readonly List<Uri> _uris;
 
     private ProjectRunner(
@@ -25,7 +26,8 @@ internal sealed partial class ProjectRunner
         HttpClient httpClient,
         ChannelWriter<InAppMessage> messageChannelWriter,
         IProgress<double> progress,
-        ILogger logger)
+        ILogger logger,
+        Lazy<ILogger> uriRunnerLogger)
     {
         _uris = uris;
         OutputDirectory = outputDirectory;
@@ -33,6 +35,7 @@ internal sealed partial class ProjectRunner
         _messageChannelWriter = messageChannelWriter;
         _progress = progress;
         _logger = logger;
+        _uriRunnerLogger = uriRunnerLogger;
     }
 
     private static CultureInfo P => CultureInfo.InvariantCulture;
@@ -50,16 +53,13 @@ internal sealed partial class ProjectRunner
         var startTime = DateTime.Now;
         string effectiveOutputDirectory = GetOutputDirectoryOrFallback(projectDto, startTime);
         var logger = loggerFactory.CreateLogger<ProjectRunner>();
-        return new(validUris, effectiveOutputDirectory, httpClient, messageChannelWriter, progress, logger);
+        Lazy<ILogger> uriRunnerLogger = new(loggerFactory.CreateLogger<UriRunner>);
+        return new(
+            validUris, effectiveOutputDirectory, httpClient, messageChannelWriter, progress, logger, uriRunnerLogger);
     }
 
-    internal Task<ProjectCollectedData> RunAsync(CancellationToken cancellationToken)
-    {
-        if (_uris is [])
-            return Task.FromResult(new ProjectCollectedData([]));
-
-        return RunUncheckedAsync(cancellationToken);
-    }
+    internal Task<ProjectCollectedData> RunAsync(CancellationToken cancellationToken) =>
+        _uris is [] ? Task.FromResult(new ProjectCollectedData([])) : RunUncheckedAsync(cancellationToken);
 
     private async Task<ProjectCollectedData> RunUncheckedAsync(CancellationToken cancellationToken)
     {
@@ -73,21 +73,18 @@ internal sealed partial class ProjectRunner
             LogProcessingUrl(uri, uriIndex, _uris.Count);
             try
             {
-                var uriRunner = UriRunner.Create(uriIndex, uri, _httpClient, progress);
+                UriRunner uriRunner = new(uriIndex, uri, _httpClient, progress, _uriRunnerLogger.Value);
                 var uriCollectedDataFuture = uriRunner.RunAsync(cancellationToken);
                 var uriCollectedData = await uriCollectedDataFuture.ConfigureAwait(false);
-                var histogramTask = BuildThenSaveHistogramsAsync(uriCollectedData, cancellationToken);
-                await histogramTask.ConfigureAwait(false);
+                await BuildThenSaveHistogramsAsync(uriCollectedData, cancellationToken).ConfigureAwait(false);
                 await WriteUriCollectedDataAsync(uriCollectedData, cancellationToken).ConfigureAwait(false);
                 uriCollectedDataset[uriIndex] = uriCollectedData;
             }
-            catch (OperationCanceledException) { }
-            catch (Exception exception)
+            catch (Exception exception) when (exception is not OperationCanceledException)
             {
                 LogException(exception);
                 var message = InAppMessage.FromException(exception);
-                var task = _messageChannelWriter.WriteAsync(message, cancellationToken);
-                await task.ConfigureAwait(false);
+                await _messageChannelWriter.WriteAsync(message, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -143,8 +140,7 @@ internal sealed partial class ProjectRunner
         if (metrics is not null)
             _ = metrics.PrintMembers(builder.AppendLine());
         var level = metrics is null ? LogLevel.Warning : LogLevel.Information;
-        var task = _messageChannelWriter.WriteAsync(
-            InAppMessage.FromMessage(builder.ToString(), level), cancellationToken);
-        await task.ConfigureAwait(false);
+        var message = InAppMessage.FromMessage(builder.ToString(), level);
+        await _messageChannelWriter.WriteAsync(message, cancellationToken).ConfigureAwait(false);
     }
 }

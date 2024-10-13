@@ -5,45 +5,36 @@ using System.Diagnostics;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace ResponsiveFlow;
 
-internal sealed class UriRunner
+internal sealed partial class UriRunner
 {
     internal const int AttemptCount = 100;
     private const int ConcurrentAttemptCount = 20;
 
     private readonly HttpClient _httpClient;
+    private readonly ILogger _logger;
     private readonly IProgress<UriProgressReport> _progress;
 
-    private UriRunner(
+    internal UriRunner(
         int uriIndex,
         Uri uri,
         HttpClient httpClient,
-        IProgress<UriProgressReport> progress)
+        IProgress<UriProgressReport> progress,
+        ILogger logger)
     {
         UriIndex = uriIndex;
         Uri = uri;
         _httpClient = httpClient;
         _progress = progress;
+        _logger = logger;
     }
 
     private int UriIndex { get; }
 
     private Uri Uri { get; }
-
-    internal static UriRunner Create(
-        int uriIndex,
-        Uri uri,
-        HttpClient httpClient,
-        IProgress<UriProgressReport> progress)
-    {
-        ArgumentNullException.ThrowIfNull(uri);
-        ArgumentNullException.ThrowIfNull(httpClient);
-        ArgumentNullException.ThrowIfNull(progress);
-
-        return new(uriIndex, uri, httpClient, progress);
-    }
 
     internal async Task<UriCollectedData> RunAsync(CancellationToken cancellationToken)
     {
@@ -56,8 +47,7 @@ internal sealed class UriRunner
              !cancellationToken.IsCancellationRequested && attemptIndex < AttemptCount;
              ++attemptIndex)
         {
-            var semaphoreTask = semaphore.WaitAsync(cancellationToken);
-            await semaphoreTask.ConfigureAwait(false);
+            await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
             var future = RequestAsync(attemptIndex, semaphore, exceptionsWritten, cancellationToken);
             futures.Add(future);
         }
@@ -81,11 +71,13 @@ internal sealed class UriRunner
             {
                 _ = await responseFuture.ConfigureAwait(false);
             }
-            catch (OperationCanceledException) { }
-            catch (Exception exception)
+            catch (Exception exception) when (exception is not OperationCanceledException)
             {
                 if (exceptionsWritten.TryAdd(exception, true))
+                {
+                    LogException(exception);
                     _progress.Report(new(exception));
+                }
             }
 
             long endingTimestamp = Stopwatch.GetTimestamp();
