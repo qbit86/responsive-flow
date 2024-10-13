@@ -87,11 +87,14 @@ It uses some basic heuristics for comparison (range test, Tukey test, three-sigm
 
 The solution consists of three projects — Application, Presentation, and Models.
 
-The Application entry point `App.Main()` serves as the composition root for setting up dependencies in the DI container.
+The **Application** entry point `App.Main()` serves as the composition root for setting up dependencies in the DI container.
 
-The Presentation project provides the viewmodels and defines the UI logic.
+The **Presentation** project provides the viewmodels and defines the UI logic.
+The UI states and transitions between them are as follows:
 
-All the asynchronous machinery for making requests and collecting the measurements is placed in the Models project.
+<img src="./docs/state-machine.svg" alt="State machine" />
+
+All the asynchronous machinery for making requests and collecting the measurements is placed in the **Models** project.
 
 [^BP]: I’ve Stopped Using Box Plots. Should You?  
 https://nightingaledvs.com/ive-stopped-using-box-plots-should-you/
