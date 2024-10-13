@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Diagnostics;
+using System.IO;
 using System.Net.Http;
 using System.Reflection;
 using System.Windows;
@@ -22,7 +24,7 @@ public partial class App
 
         ConfigurationBuilder configurationBuilder = new();
         ConfigureConfiguration(configurationBuilder);
-        var configurationRoot = configurationBuilder.Build();
+        var configurationRoot = SafeBuild(configurationBuilder);
         services.AddSingleton<IConfiguration>(configurationRoot);
 
         services.AddLogging(ConfigureLogging);
@@ -66,14 +68,31 @@ public partial class App
 #endif
         configurationBuilder.AddJsonFile("appsettings.json", true)
             .AddJsonFile($"appsettings.{environmentName}.json", true);
-
 #if DEBUG
         configurationBuilder.AddUserSecrets(Assembly.GetExecutingAssembly(), true);
 #endif
 
-        configurationBuilder.AddEnvironmentVariables();
-        configurationBuilder.AddCommandLine(Environment.GetCommandLineArgs());
+        SafeConfigureConfiguration(configurationBuilder);
     }
 
-    private static HttpClient CreateHttpClient(IServiceProvider serviceProvider) => new();
+    private static void SafeConfigureConfiguration(IConfigurationBuilder configurationBuilder) =>
+        configurationBuilder.AddCommandLine(Environment.GetCommandLineArgs());
+
+    private static IConfigurationRoot SafeBuild(ConfigurationBuilder configurationBuilder)
+    {
+        try
+        {
+            return configurationBuilder.Build();
+        }
+        catch (InvalidDataException exception)
+        {
+            Debug.WriteLine(exception);
+            configurationBuilder.Sources.Clear();
+            SafeConfigureConfiguration(configurationBuilder);
+            return configurationBuilder.Build();
+        }
+    }
+
+    private static HttpClient CreateHttpClient(IServiceProvider serviceProvider) =>
+        new() { Timeout = TimeSpan.FromSeconds(1.0) };
 }

@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace ResponsiveFlow;
@@ -15,24 +16,30 @@ internal sealed partial class ProjectRunner
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger _logger;
+    private readonly int _maxConcurrentRequests;
     private readonly ChannelWriter<InAppMessage> _messageChannelWriter;
     private readonly IProgress<double> _progress;
+    private readonly Lazy<ILogger> _uriRunnerLogger;
     private readonly List<Uri> _uris;
 
     private ProjectRunner(
         List<Uri> uris,
         string outputDirectory,
         HttpClient httpClient,
+        int maxConcurrentRequests,
         ChannelWriter<InAppMessage> messageChannelWriter,
         IProgress<double> progress,
-        ILogger logger)
+        ILogger logger,
+        Lazy<ILogger> uriRunnerLogger)
     {
         _uris = uris;
         OutputDirectory = outputDirectory;
         _httpClient = httpClient;
+        _maxConcurrentRequests = maxConcurrentRequests;
         _messageChannelWriter = messageChannelWriter;
         _progress = progress;
         _logger = logger;
+        _uriRunnerLogger = uriRunnerLogger;
     }
 
     private static CultureInfo P => CultureInfo.InvariantCulture;
@@ -44,22 +51,39 @@ internal sealed partial class ProjectRunner
         HttpClient httpClient,
         ChannelWriter<InAppMessage> messageChannelWriter,
         IProgress<double> progress,
+        IConfiguration config,
         ILoggerFactory loggerFactory)
     {
         var validUris = GetValidUris(projectDto);
         var startTime = DateTime.Now;
         string effectiveOutputDirectory = GetOutputDirectoryOrFallback(projectDto, startTime);
         var logger = loggerFactory.CreateLogger<ProjectRunner>();
-        return new(validUris, effectiveOutputDirectory, httpClient, messageChannelWriter, progress, logger);
+        Lazy<ILogger> uriRunnerLogger = new(loggerFactory.CreateLogger<UriRunner>);
+        int maxConcurrentRequests = GetMaxConcurrentRequests();
+        WriteMaxConcurrentRequests();
+        return new(
+            validUris, effectiveOutputDirectory, httpClient, maxConcurrentRequests,
+            messageChannelWriter, progress, logger, uriRunnerLogger);
+
+        int GetMaxConcurrentRequests(int defaultMaxConcurrentRequests = 20)
+        {
+            if (config["MaxConcurrentRequests"] is not { Length: > 0 } s)
+                return defaultMaxConcurrentRequests;
+            if (!int.TryParse(s, out int rawMaxConcurrentRequests))
+                return defaultMaxConcurrentRequests;
+            return int.Clamp(rawMaxConcurrentRequests, 1, sbyte.MaxValue);
+        }
+
+        void WriteMaxConcurrentRequests()
+        {
+            LogMaxConcurrentRequests(logger, maxConcurrentRequests);
+            var message = InAppMessage.FromMessage($"MaxConcurrentRequests: {maxConcurrentRequests}", LogLevel.Debug);
+            _ = messageChannelWriter.TryWrite(message);
+        }
     }
 
-    internal Task<ProjectCollectedData> RunAsync(CancellationToken cancellationToken)
-    {
-        if (_uris is [])
-            return Task.FromResult(new ProjectCollectedData([]));
-
-        return RunUncheckedAsync(cancellationToken);
-    }
+    internal Task<ProjectCollectedData> RunAsync(CancellationToken cancellationToken) =>
+        _uris is [] ? Task.FromResult(new ProjectCollectedData([])) : RunUncheckedAsync(cancellationToken);
 
     private async Task<ProjectCollectedData> RunUncheckedAsync(CancellationToken cancellationToken)
     {
@@ -73,20 +97,19 @@ internal sealed partial class ProjectRunner
             LogProcessingUrl(uri, uriIndex, _uris.Count);
             try
             {
-                var uriRunner = UriRunner.Create(uriIndex, uri, _httpClient, progress);
+                UriRunner uriRunner = new(
+                    uriIndex, uri, _httpClient, _maxConcurrentRequests, progress, _uriRunnerLogger.Value);
                 var uriCollectedDataFuture = uriRunner.RunAsync(cancellationToken);
                 var uriCollectedData = await uriCollectedDataFuture.ConfigureAwait(false);
-                var histogramTask = BuildThenSaveHistogramsAsync(uriCollectedData, cancellationToken);
-                await histogramTask.ConfigureAwait(false);
+                await BuildThenSaveHistogramsAsync(uriCollectedData, cancellationToken).ConfigureAwait(false);
                 await WriteUriCollectedDataAsync(uriCollectedData, cancellationToken).ConfigureAwait(false);
                 uriCollectedDataset[uriIndex] = uriCollectedData;
             }
-            catch (OperationCanceledException) { }
             catch (Exception exception)
             {
+                LogException(exception);
                 var message = InAppMessage.FromException(exception);
-                var task = _messageChannelWriter.WriteAsync(message, cancellationToken);
-                await task.ConfigureAwait(false);
+                await _messageChannelWriter.WriteAsync(message, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -142,8 +165,7 @@ internal sealed partial class ProjectRunner
         if (metrics is not null)
             _ = metrics.PrintMembers(builder.AppendLine());
         var level = metrics is null ? LogLevel.Warning : LogLevel.Information;
-        var task = _messageChannelWriter.WriteAsync(
-            InAppMessage.FromMessage(builder.ToString(), level), cancellationToken);
-        await task.ConfigureAwait(false);
+        var message = InAppMessage.FromMessage(builder.ToString(), level);
+        await _messageChannelWriter.WriteAsync(message, cancellationToken).ConfigureAwait(false);
     }
 }

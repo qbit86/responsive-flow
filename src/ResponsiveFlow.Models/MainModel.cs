@@ -1,34 +1,36 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace ResponsiveFlow;
 
 public sealed partial class MainModel
 {
+    private readonly IConfiguration _config;
     private readonly HttpClient _httpClient;
     private readonly ILogger _logger;
     private readonly ILoggerFactory _loggerFactory;
     private readonly Channel<InAppMessage> _messageChannel;
     private readonly Progress<double> _progress = new();
-    private readonly ProjectDto _projectDto;
 
-    public MainModel(IOptions<ProjectDto> projectDto, HttpClient httpClient, ILoggerFactory loggerFactory)
+    public MainModel(HttpClient httpClient, IConfiguration config, ILoggerFactory loggerFactory)
     {
-        ArgumentNullException.ThrowIfNull(projectDto);
         ArgumentNullException.ThrowIfNull(httpClient);
+        ArgumentNullException.ThrowIfNull(config);
         ArgumentNullException.ThrowIfNull(loggerFactory);
 
         _messageChannel = Channel.CreateUnbounded<InAppMessage>(new UnboundedChannelOptions { SingleReader = true });
         _logger = loggerFactory.CreateLogger<MainModel>();
-        _projectDto = projectDto.Value;
         _httpClient = httpClient;
+        _config = config;
         _loggerFactory = loggerFactory;
     }
 
@@ -40,15 +42,26 @@ public sealed partial class MainModel
         remove => _progress.ProgressChanged -= value;
     }
 
-    public async Task<ProjectReportDto> RunAsync(CancellationToken cancellationToken)
+    public Task<ProjectReportDto> RunAsync(ProjectDto projectDto, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(projectDto);
+
+        return RunUncheckedAsync(projectDto, cancellationToken);
+    }
+
+    private async Task<ProjectReportDto> RunUncheckedAsync(ProjectDto projectDto, CancellationToken cancellationToken)
     {
         var projectRunner = ProjectRunner.Create(
-            _projectDto, _httpClient, _messageChannel.Writer, _progress, _loggerFactory);
+            projectDto, _httpClient, _messageChannel.Writer, _progress, _config, _loggerFactory);
         LogProcessingProject(projectRunner.OutputDirectory);
         try
         {
             var collectedDataFuture = projectRunner.RunAsync(cancellationToken);
             var projectCollectedData = await collectedDataFuture.ConfigureAwait(false);
+
+            await WriteRankingAsync(projectCollectedData.UriCollectedDataset, cancellationToken)
+                .ConfigureAwait(false);
+
             var projectReport = ProjectReportDto.Create(projectCollectedData);
             _ = Directory.CreateDirectory(projectRunner.OutputDirectory);
             string path = Path.Join(projectRunner.OutputDirectory, "report.json");
@@ -58,9 +71,8 @@ public sealed partial class MainModel
                 var serializerTask = JsonSerializer.SerializeAsync(utf8Json, projectReport,
                     ProjectReportJsonSerializerContext.Default.ProjectReportDto, cancellationToken);
                 await serializerTask.ConfigureAwait(false);
-                var task = _messageChannel.Writer.WriteAsync(
-                    InAppMessage.FromMessage($"Saved report to '{path}'", LogLevel.Debug), cancellationToken);
-                await task.ConfigureAwait(false);
+                var message = InAppMessage.FromMessage($"Saved report to '{path}'", LogLevel.Debug);
+                await _messageChannel.Writer.WriteAsync(message, cancellationToken).ConfigureAwait(false);
             }
 
             return projectReport;
@@ -69,5 +81,27 @@ public sealed partial class MainModel
         {
             LogProcessedProject(projectRunner.OutputDirectory);
         }
+    }
+
+    private async Task WriteRankingAsync(
+        IReadOnlyList<UriCollectedData> uriCollectedDataset, CancellationToken cancellationToken)
+    {
+        if (uriCollectedDataset.Count is 0)
+            return;
+
+        StringBuilder builder = new(uriCollectedDataset.Count * 64);
+        builder.AppendLine("Ranking of URLs by response time:");
+        for (int i = 0; i < uriCollectedDataset.Count; ++i)
+        {
+            if (i > 0)
+                builder.AppendLine();
+            builder.Append(i).Append(".\t#");
+            var uriCollectedData = uriCollectedDataset[i];
+            builder.Append(uriCollectedData.UriIndex);
+            builder.Append('\t').Append(uriCollectedData.Uri);
+        }
+
+        var message = InAppMessage.FromMessage(builder.ToString(), LogLevel.Debug);
+        await _messageChannel.Writer.WriteAsync(message, cancellationToken).ConfigureAwait(false);
     }
 }

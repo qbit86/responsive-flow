@@ -8,11 +8,24 @@
         mc:Ignorable="d"
         Height="500" Width="800"
         MinHeight="300" MinWidth="500"
-        Title="{Binding Title, Mode=OneTime}">
+        Title="{Binding Title, Mode=OneWay}">
     <DockPanel LastChildFill="True">
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
-            <Button Margin="8" MinHeight="32" MinWidth="64" Command="{Binding RunCommand}">Run</Button>
-        </StackPanel>
+        <Menu DockPanel.Dock="Top" Margin="8" VerticalAlignment="Top">
+            <MenuItem Header="_Open…" Command="{Binding OpenCommand}" />
+            <MenuItem Header="_Run" Command="{Binding RunCommand}" />
+        </Menu>
+        <StatusBar DockPanel.Dock="Bottom" Margin="8 0 8 8">
+            <StatusBarItem>
+                <TextBlock Text="{Binding StateStatus, Mode=OneWay}" />
+            </StatusBarItem>
+            <Separator />
+            <StatusBarItem HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                <ProgressBar
+                    Height="12"
+                    HorizontalAlignment="Stretch"
+                    IsIndeterminate="True" />
+            </StatusBarItem>
+        </StatusBar>
         <ProgressBar
             DockPanel.Dock="Top"
             Height="12"
@@ -21,13 +34,8 @@
             Maximum="1.0"
             Value="{Binding ProgressValue, Mode=OneWay}"
             Visibility="{Binding ProgressBarVisibility, Mode=OneWay}" />
-        <ProgressBar
-            DockPanel.Dock="Bottom"
-            Height="12"
-            HorizontalAlignment="Stretch"
-            IsIndeterminate="True"
-            Margin="8 0 8 8" />
         <ListView
+            x:Name="MessageListView"
             HorizontalContentAlignment="Stretch"
             Margin="8 0 8 8"
             ItemsSource="{Binding Messages, Mode=OneTime}">
