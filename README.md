@@ -6,26 +6,25 @@ ResponsiveFlow is a minimalist WPF application that measures the time of HTTP re
 
 ## Usage
 
-The application accepts the _appsettings.json_ configuration file as input.
-Depending on the build configuration, _appsettings.Development.json_ or _appsettings.Production.json_ is also an option, which is convenient to override the default configuration when running from the IDE.
-See _src/ResponsiveFlow.Application/appsettings-example.json_ for a reference.
+The application takes the JSON project file as input.
+It specifies the list of URLs to request, and the root directory for the output.
+For an example of such a project file, see [project-example.json](./src/ResponsiveFlow.Application/project-example.json).
 
 ```json
 {
-  "Logging": {
-    "LogLevel": {
-      "Default": "Warning"
-    }
-  },
-  "Project": {
-    "Urls": [
-      "https://jsonplaceholder.typicode.com/users/",
-      "https://picsum.photos/seed/1729/350/200",
-      "https://placeholder.pics/svg/350x200"
-    ],
-    "OutputDir": "C:/Temp/"
-  }
+  "Urls": [
+    "https://jsonplaceholder.typicode.com/users/",
+    "https://picsum.photos/seed/1729/350/200",
+    "https://placeholder.pics/svg/350x200"
+  ],
+  "OutputDir": "C:/Temp/"
 }
+```
+
+You can select the project file from an **Open…** menu, or pass it to the application as a `--Project` command line argument.
+
+```sh
+ResponsiveFlow.Application.exe --Project="c:/Temp/Projects/responsive-flow-project.json"
 ```
 
 The output report is saved in the subfolder of the directory specified by the `OutputDir` setting.
@@ -47,7 +46,6 @@ The output JSON report contains the collected metrics for each input URL.
 
 ```json
 [
-    ...
     {
         "UriIndex": 3,
         "Uri": "https://jsonplaceholder.typicode.com/users/",
