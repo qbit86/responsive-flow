@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Channels;
@@ -52,6 +54,10 @@ public sealed partial class MainModel
         {
             var collectedDataFuture = projectRunner.RunAsync(cancellationToken);
             var projectCollectedData = await collectedDataFuture.ConfigureAwait(false);
+
+            await WriteRankingAsync(projectCollectedData.UriCollectedDataset, cancellationToken)
+                .ConfigureAwait(false);
+
             var projectReport = ProjectReportDto.Create(projectCollectedData);
             _ = Directory.CreateDirectory(projectRunner.OutputDirectory);
             string path = Path.Join(projectRunner.OutputDirectory, "report.json");
@@ -71,5 +77,27 @@ public sealed partial class MainModel
         {
             LogProcessedProject(projectRunner.OutputDirectory);
         }
+    }
+
+    private async Task WriteRankingAsync(
+        IReadOnlyList<UriCollectedData> uriCollectedDataset, CancellationToken cancellationToken)
+    {
+        if (uriCollectedDataset.Count is 0)
+            return;
+
+        StringBuilder builder = new(uriCollectedDataset.Count * 64);
+        builder.AppendLine("Ranking of URLs by response time:");
+        for (int i = 0; i < uriCollectedDataset.Count; ++i)
+        {
+            if (i > 0)
+                builder.AppendLine();
+            builder.Append(i).Append(".\t#");
+            var uriCollectedData = uriCollectedDataset[i];
+            builder.Append(uriCollectedData.UriIndex);
+            builder.Append('\t').Append(uriCollectedData.Uri);
+        }
+
+        var message = InAppMessage.FromMessage(builder.ToString(), LogLevel.Debug);
+        await _messageChannel.Writer.WriteAsync(message, cancellationToken).ConfigureAwait(false);
     }
 }
