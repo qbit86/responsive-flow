@@ -75,7 +75,7 @@ internal sealed partial class UriRunner
             {
                 _ = await responseFuture.ConfigureAwait(false);
             }
-            catch (Exception exception) when (exception is not OperationCanceledException)
+            catch (Exception exception)
             {
                 if (exceptionsWritten.TryAdd(exception, true))
                 {

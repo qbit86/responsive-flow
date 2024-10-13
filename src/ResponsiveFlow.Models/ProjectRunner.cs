@@ -105,7 +105,7 @@ internal sealed partial class ProjectRunner
                 await WriteUriCollectedDataAsync(uriCollectedData, cancellationToken).ConfigureAwait(false);
                 uriCollectedDataset[uriIndex] = uriCollectedData;
             }
-            catch (Exception exception) when (exception is not OperationCanceledException)
+            catch (Exception exception)
             {
                 LogException(exception);
                 var message = InAppMessage.FromException(exception);
