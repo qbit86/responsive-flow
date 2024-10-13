@@ -71,7 +71,6 @@ public partial class App
         configurationBuilder.AddUserSecrets(Assembly.GetExecutingAssembly(), true);
 #endif
 
-        configurationBuilder.AddEnvironmentVariables();
         configurationBuilder.AddCommandLine(Environment.GetCommandLineArgs());
     }
 
