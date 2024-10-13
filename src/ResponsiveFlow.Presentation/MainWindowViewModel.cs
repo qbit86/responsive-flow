@@ -12,6 +12,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Machinery;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 
 namespace ResponsiveFlow;
@@ -25,6 +26,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     };
 
     private readonly IConfiguration _config;
+    private readonly ILogger<MainWindowViewModel> _logger;
     private readonly MainModel _model;
     private readonly AsyncRelayCommand _openCommand;
     private readonly AsyncRelayCommand _runCommand;
@@ -32,12 +34,14 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     private readonly CancellationTokenSource _stoppingCts = new();
     private double _progressValue;
 
-    public MainWindowViewModel(MainModel model, IConfiguration config)
+    public MainWindowViewModel(MainModel model, IConfiguration config, ILogger<MainWindowViewModel> logger)
     {
         ArgumentNullException.ThrowIfNull(model);
         ArgumentNullException.ThrowIfNull(config);
+        ArgumentNullException.ThrowIfNull(logger);
 
         _config = config;
+        _logger = logger;
         _model = model;
         _model.ProgressChanged += OnModelProgressChanged;
         _openCommand = new AsyncRelayCommand(ExecuteOpenAsync, CanExecuteOpen);
@@ -117,6 +121,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
             _ = _stateMachine.TryProcessEvent(CancelEvent.Instance);
             if (exception is not OperationCanceledException)
             {
+                LogException(exception);
                 var message = InAppMessage.FromException(exception);
                 var messageViewModel = InAppMessageViewModel.Create(message);
                 Messages.Add(messageViewModel);
@@ -167,6 +172,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
             _ = _stateMachine.TryProcessEvent(CancelEvent.Instance);
             if (exception is not OperationCanceledException)
             {
+                LogException(exception);
                 var message = InAppMessage.FromException(exception);
                 var messageViewModel = InAppMessageViewModel.Create(message);
                 Messages.Add(messageViewModel);
@@ -210,6 +216,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
             _ = _stateMachine.TryProcessEvent(CancelEvent.Instance);
             if (exception is not OperationCanceledException)
             {
+                LogException(exception);
                 var message = InAppMessage.FromException(exception);
                 var messageViewModel = InAppMessageViewModel.Create(message);
                 Messages.Add(messageViewModel);

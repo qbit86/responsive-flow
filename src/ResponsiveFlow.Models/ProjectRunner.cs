@@ -84,6 +84,7 @@ internal sealed partial class ProjectRunner
             catch (OperationCanceledException) { }
             catch (Exception exception)
             {
+                LogException(exception);
                 var message = InAppMessage.FromException(exception);
                 var task = _messageChannelWriter.WriteAsync(message, cancellationToken);
                 await task.ConfigureAwait(false);
