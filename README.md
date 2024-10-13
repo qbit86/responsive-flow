@@ -31,6 +31,27 @@ The output report is saved in the subfolder of the directory specified by the `O
 If it's omitted, the default is the subfolder in the user's home directory.
 For example _c:/Users/{Username}/Documents/ResponsiveFlow/281_01-49-19/_.
 
+The application also accepts the _appsettings.json_ as a configuration file.
+Depending on the build configuration, _appsettings.Development.json_ or _appsettings.Production.json_ is also an option, which is convenient to override the default configuration when running from the IDE.
+See [appsettings-example.json](./src/ResponsiveFlow.Application/appsettings-example.json) for a reference.
+
+```json
+{
+    "Logging": {
+        "LogLevel": {
+            "Default": "Warning"
+        }
+    },
+    "MaxConcurrentRequests": 23
+}
+```
+
+You can also set the maximum number of concurrent requests using the `--MaxConcurrentRequests` command line argument.
+
+```sh
+ResponsiveFlow.Application.exe --MaxConcurrentRequests=24
+```
+
 The continuous progress bar at the bottom of the window shows overall responsiveness;
 the actual progress is shown by the progress bar at the top.
 
