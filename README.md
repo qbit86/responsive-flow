@@ -37,12 +37,12 @@ See [appsettings-example.json](./src/ResponsiveFlow.Application/appsettings-exam
 
 ```json
 {
-    "Logging": {
-        "LogLevel": {
-            "Default": "Warning"
-        }
-    },
-    "MaxConcurrentRequests": 23
+  "Logging": {
+    "LogLevel": {
+      "Default": "Warning"
+    }
+  },
+  "MaxConcurrentRequests": 23
 }
 ```
 
