@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Net.Http;
 using System.Text;
@@ -59,8 +61,8 @@ public sealed partial class MainModel
             var collectedDataFuture = projectRunner.RunAsync(cancellationToken);
             var projectCollectedData = await collectedDataFuture.ConfigureAwait(false);
 
-            await WriteRankingAsync(projectCollectedData.UriCollectedDataset, cancellationToken)
-                .ConfigureAwait(false);
+            var (dataset, ranks) = projectCollectedData;
+            await WriteRankingAsync(dataset, ranks, cancellationToken).ConfigureAwait(false);
 
             var projectReport = ProjectReportDto.Create(projectCollectedData);
             _ = Directory.CreateDirectory(projectRunner.OutputDirectory);
@@ -84,19 +86,28 @@ public sealed partial class MainModel
     }
 
     private async Task WriteRankingAsync(
-        IReadOnlyList<UriCollectedData> uriCollectedDataset, CancellationToken cancellationToken)
+        IReadOnlyList<UriCollectedData> uriCollectedDataset,
+        IReadOnlyList<int> ranks,
+        CancellationToken cancellationToken)
     {
         if (uriCollectedDataset.Count is 0)
             return;
 
+        Debug.Assert(uriCollectedDataset.Count <= ranks.Count);
         StringBuilder builder = new(uriCollectedDataset.Count * 64);
         builder.AppendLine("Ranking of URLs by response time:");
         for (int i = 0; i < uriCollectedDataset.Count; ++i)
         {
             if (i > 0)
                 builder.AppendLine();
-            builder.Append(i).Append(".\t#");
+            builder.Append(ranks[i]).Append('.');
+            builder.Append('\t');
             var uriCollectedData = uriCollectedDataset[i];
+            if (uriCollectedData.Metrics is { } m)
+                builder.Append(CultureInfo.InvariantCulture, $"{m.Mean:F3}ms");
+            else
+                builder.Append('—');
+            builder.Append("\t#");
             builder.Append(uriCollectedData.UriIndex);
             builder.Append('\t').Append(uriCollectedData.Uri);
         }

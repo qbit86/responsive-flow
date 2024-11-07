@@ -3,7 +3,9 @@ using System.Text;
 
 namespace ResponsiveFlow;
 
-public readonly record struct ProjectCollectedData(IReadOnlyList<UriCollectedData> UriCollectedDataset)
+public readonly record struct ProjectCollectedData(
+    IReadOnlyList<UriCollectedData> UriCollectedDataset,
+    IReadOnlyList<int> Ranks)
 {
     public override string ToString()
     {

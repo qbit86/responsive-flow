@@ -83,7 +83,7 @@ internal sealed partial class ProjectRunner
     }
 
     internal Task<ProjectCollectedData> RunAsync(CancellationToken cancellationToken) =>
-        _uris is [] ? Task.FromResult(new ProjectCollectedData([])) : RunUncheckedAsync(cancellationToken);
+        _uris is [] ? Task.FromResult(new ProjectCollectedData([], [])) : RunUncheckedAsync(cancellationToken);
 
     private async Task<ProjectCollectedData> RunUncheckedAsync(CancellationToken cancellationToken)
     {
@@ -118,7 +118,8 @@ internal sealed partial class ProjectRunner
         }
 
         uriCollectedDataset.AsSpan().Sort(UriCollectedDataComparer.Instance);
-        return new(uriCollectedDataset);
+        int[] ranks = RankHelpers.GetRanksOrdered(uriCollectedDataset, EquivalenceComparer.Instance);
+        return new(uriCollectedDataset, ranks);
 
         void HandleProgressChanged(UriProgressReport report)
         {
@@ -168,4 +169,14 @@ internal sealed partial class ProjectRunner
         var message = InAppMessage.FromMessage(builder.ToString(), level);
         await _messageChannelWriter.WriteAsync(message, cancellationToken).ConfigureAwait(false);
     }
+}
+
+file sealed class EquivalenceComparer : IEqualityComparer<UriCollectedData>
+{
+    internal static EquivalenceComparer Instance { get; } = new();
+
+    public bool Equals(UriCollectedData? x, UriCollectedData? y) =>
+        SampleEquivalenceComparer.Default.Equals(x?.Sample, y?.Sample);
+
+    public int GetHashCode(UriCollectedData obj) => throw new NotSupportedException();
 }
