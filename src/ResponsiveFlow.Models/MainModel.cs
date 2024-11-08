@@ -17,21 +17,21 @@ namespace ResponsiveFlow;
 public sealed partial class MainModel
 {
     private readonly IConfiguration _config;
-    private readonly HttpClient _httpClient;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger _logger;
     private readonly ILoggerFactory _loggerFactory;
     private readonly Channel<InAppMessage> _messageChannel;
     private readonly Progress<double> _progress = new();
 
-    public MainModel(HttpClient httpClient, IConfiguration config, ILoggerFactory loggerFactory)
+    public MainModel(IHttpClientFactory httpClientFactory, IConfiguration config, ILoggerFactory loggerFactory)
     {
-        ArgumentNullException.ThrowIfNull(httpClient);
+        ArgumentNullException.ThrowIfNull(httpClientFactory);
         ArgumentNullException.ThrowIfNull(config);
         ArgumentNullException.ThrowIfNull(loggerFactory);
 
         _messageChannel = Channel.CreateUnbounded<InAppMessage>(new UnboundedChannelOptions { SingleReader = true });
         _logger = loggerFactory.CreateLogger<MainModel>();
-        _httpClient = httpClient;
+        _httpClientFactory = httpClientFactory;
         _config = config;
         _loggerFactory = loggerFactory;
     }
@@ -54,7 +54,7 @@ public sealed partial class MainModel
     private async Task<ProjectReportDto> RunUncheckedAsync(ProjectDto projectDto, CancellationToken cancellationToken)
     {
         var projectRunner = ProjectRunner.Create(
-            projectDto, _httpClient, _messageChannel.Writer, _progress, _config, _loggerFactory);
+            projectDto, _httpClientFactory, _messageChannel.Writer, _progress, _config, _loggerFactory);
         LogProcessingProject(projectRunner.OutputDirectory);
         try
         {
