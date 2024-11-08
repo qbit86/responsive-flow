@@ -7,15 +7,21 @@ namespace ResponsiveFlow;
 
 public class ProjectReportDto
 {
-    private ProjectReportDto(IReadOnlyList<UriReportDto> uriReports) => UriReports = uriReports;
+    private ProjectReportDto(IReadOnlyList<UriReportDto> uriReports, IReadOnlyList<int> ranks)
+    {
+        UriReports = uriReports;
+        Ranks = ranks;
+    }
 
     public IReadOnlyList<UriReportDto> UriReports { get; }
+
+    public IReadOnlyList<int> Ranks { get; }
 
     public static ProjectReportDto Create(ProjectCollectedData projectCollectedData)
     {
         ArgumentNullException.ThrowIfNull(projectCollectedData);
         var uriReports = projectCollectedData.UriCollectedDataset.Select(UriReportDto.Create).ToList();
-        return new(uriReports);
+        return new(uriReports, projectCollectedData.Ranks);
     }
 
     public override string ToString()
