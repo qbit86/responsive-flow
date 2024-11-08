@@ -14,7 +14,7 @@ namespace ResponsiveFlow;
 
 internal sealed partial class ProjectRunner
 {
-    private readonly HttpClient _httpClient;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger _logger;
     private readonly int _maxConcurrentRequests;
     private readonly ChannelWriter<InAppMessage> _messageChannelWriter;
@@ -25,7 +25,7 @@ internal sealed partial class ProjectRunner
     private ProjectRunner(
         List<Uri> uris,
         string outputDirectory,
-        HttpClient httpClient,
+        IHttpClientFactory httpClientFactory,
         int maxConcurrentRequests,
         ChannelWriter<InAppMessage> messageChannelWriter,
         IProgress<double> progress,
@@ -34,7 +34,7 @@ internal sealed partial class ProjectRunner
     {
         _uris = uris;
         OutputDirectory = outputDirectory;
-        _httpClient = httpClient;
+        _httpClientFactory = httpClientFactory;
         _maxConcurrentRequests = maxConcurrentRequests;
         _messageChannelWriter = messageChannelWriter;
         _progress = progress;
@@ -48,7 +48,7 @@ internal sealed partial class ProjectRunner
 
     internal static ProjectRunner Create(
         ProjectDto projectDto,
-        HttpClient httpClient,
+        IHttpClientFactory httpClient,
         ChannelWriter<InAppMessage> messageChannelWriter,
         IProgress<double> progress,
         IConfiguration config,
@@ -97,8 +97,9 @@ internal sealed partial class ProjectRunner
             LogProcessingUrl(uri, uriIndex, _uris.Count);
             try
             {
+                var httpClient = _httpClientFactory.CreateClient();
                 UriRunner uriRunner = new(
-                    uriIndex, uri, _httpClient, _maxConcurrentRequests, progress, _uriRunnerLogger.Value);
+                    uriIndex, uri, httpClient, _maxConcurrentRequests, progress, _uriRunnerLogger.Value);
                 var uriCollectedDataFuture = uriRunner.RunAsync(cancellationToken);
                 var uriCollectedData = await uriCollectedDataFuture.ConfigureAwait(false);
                 await BuildThenSaveHistogramsAsync(uriCollectedData, cancellationToken).ConfigureAwait(false);
