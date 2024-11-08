@@ -93,6 +93,5 @@ public partial class App
         }
     }
 
-    private static HttpClient CreateHttpClient(IServiceProvider serviceProvider) =>
-        new() { Timeout = TimeSpan.FromSeconds(1.0) };
+    private static HttpClient CreateHttpClient(IServiceProvider serviceProvider) => new();
 }
