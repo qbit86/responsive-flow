@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
-using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Machinery;
 using Microsoft.Extensions.Configuration;
@@ -17,7 +16,7 @@ using Microsoft.Win32;
 
 namespace ResponsiveFlow;
 
-public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
+public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 {
     private static readonly JsonSerializerOptions s_options = new()
     {
@@ -62,13 +61,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     public double ProgressValue
     {
         get => _progressValue;
-        private set
-        {
-            if (_progressValue.Equals(value))
-                return;
-            _progressValue = value;
-            OnPropertyChanged(ProgressValueChangedEventArgs);
-        }
+        private set => _ = TrySetProperty(ref _progressValue, value, ProgressValueChanged);
     }
 
     public string StateStatus => _stateMachine.CurrentState switch
