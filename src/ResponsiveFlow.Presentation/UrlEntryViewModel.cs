@@ -20,10 +20,11 @@ public sealed partial class UrlEntryViewModel : ViewModelBase, INotifyDataErrorI
         set
         {
             ArgumentNullException.ThrowIfNull(value);
+            string oldValue = _urlString;
             if (!TrySetProperty(ref _urlString, value, UrlStringChanged))
                 return;
 
-            bool hadErrors = HasErrors;
+            bool hadErrors = string.IsNullOrWhiteSpace(oldValue) || HasErrors;
             _urlStringErrors.Clear();
             if (!Uri.TryCreate(_urlString, UriKind.Absolute, out _url))
                 _urlStringErrors.Add(nameof(Uri.TryCreate));
