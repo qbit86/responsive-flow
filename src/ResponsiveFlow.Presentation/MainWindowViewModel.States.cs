@@ -51,7 +51,9 @@ public sealed partial class MainWindowViewModel
         public override bool TryCreateNewState(
             MainWindowViewModel context, IEvent ev, [MaybeNullWhen(false)] out State newState) => ev switch
         {
-            OpenEvent openEvent => Some(new LoadingState(openEvent.ProjectPath), out newState),
+            OpenEvent openEvent => Some(new LoadingState(this, openEvent.ProjectPath), out newState),
+            RunEvent => Some(
+                new RunningState(string.Empty, new ProjectDto { Urls = context.GetValidUrls() }), out newState),
             _ => None(out newState)
         };
 
@@ -62,7 +64,7 @@ public sealed partial class MainWindowViewModel
         }
     }
 
-    internal sealed record LoadingState(string ProjectPath) : State
+    internal sealed record LoadingState(State PreviousState, string ProjectPath) : State
     {
         public override bool TryCreateNewState(
             MainWindowViewModel context, IEvent ev, [MaybeNullWhen(false)] out State newState) => ev switch
@@ -79,6 +81,22 @@ public sealed partial class MainWindowViewModel
             if (oldState is ProjectLoadedState)
                 context.Messages.Clear();
         }
+
+        public override void OnExited(MainWindowViewModel context, IEvent ev, State newState)
+        {
+            if (newState is ReadyToRunState readyToRunState)
+            {
+                context.UrlEntries.Clear();
+                string[] urls = readyToRunState.Project.Urls ?? [];
+                foreach (string url in urls)
+                    context.UrlEntries.Add(new UrlEntryViewModel { UrlString = url });
+            }
+            else if (newState is ProjectNotLoadedState)
+            {
+                if (PreviousState is ProjectLoadedState)
+                    context.UrlEntries.Clear();
+            }
+        }
     }
 
     internal sealed record ReadyToRunState(string ProjectPath, ProjectDto Project) : ProjectLoadedState(Project)
@@ -86,8 +104,8 @@ public sealed partial class MainWindowViewModel
         public override bool TryCreateNewState(
             MainWindowViewModel context, IEvent ev, [MaybeNullWhen(false)] out State newState) => ev switch
         {
-            OpenEvent openEvent => Some(new LoadingState(openEvent.ProjectPath), out newState),
-            RunEvent => Some(new RunningState(ProjectPath, Project), out newState),
+            OpenEvent openEvent => Some(new LoadingState(this, openEvent.ProjectPath), out newState),
+            RunEvent => Some(new RunningState(ProjectPath, context.Merge(Project)), out newState),
             _ => None(out newState)
         };
     }
@@ -108,8 +126,8 @@ public sealed partial class MainWindowViewModel
         public override bool TryCreateNewState(
             MainWindowViewModel context, IEvent ev, [MaybeNullWhen(false)] out State newState) => ev switch
         {
-            RunEvent => Some(new RunningState(ProjectPath, Project), out newState),
-            OpenEvent openEvent => Some(new LoadingState(openEvent.ProjectPath), out newState),
+            RunEvent => Some(new RunningState(ProjectPath, context.Merge(Project)), out newState),
+            OpenEvent openEvent => Some(new LoadingState(this, openEvent.ProjectPath), out newState),
             _ => None(out newState)
         };
 

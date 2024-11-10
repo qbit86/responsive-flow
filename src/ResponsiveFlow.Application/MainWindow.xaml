@@ -6,8 +6,8 @@
         xmlns:rfp="clr-namespace:ResponsiveFlow;assembly=ResponsiveFlow.Presentation"
         d:DataContext="{rfp:MainWindowViewModel}"
         mc:Ignorable="d"
-        Height="500" Width="800"
-        MinHeight="300" MinWidth="500"
+        Height="800" Width="800"
+        MinHeight="500" MinWidth="500"
         Title="{Binding Title, Mode=OneWay}">
     <DockPanel LastChildFill="True">
         <Menu DockPanel.Dock="Top" Margin="8" VerticalAlignment="Top">
@@ -34,18 +34,53 @@
             Maximum="1.0"
             Value="{Binding ProgressValue, Mode=OneWay}"
             Visibility="{Binding ProgressBarVisibility, Mode=OneWay}" />
-        <ListView
-            x:Name="MessageListView"
-            HorizontalContentAlignment="Stretch"
-            Margin="8 0 8 8"
-            ItemsSource="{Binding Messages, Mode=OneTime}">
-            <ListView.ItemTemplate>
-                <DataTemplate x:Name="MessageDataTemplate" d:DataContext="{rfp:InAppMessageViewModel}">
-                    <Border Background="{Binding BackgroundBrush, Mode=OneTime}">
-                        <TextBlock Text="{Binding Text, Mode=OneTime}" />
-                    </Border>
-                </DataTemplate>
-            </ListView.ItemTemplate>
-        </ListView>
+        <Grid Margin="8 0 8 8">
+            <Grid.RowDefinitions>
+                <RowDefinition MinHeight="200" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition MinHeight="200" />
+            </Grid.RowDefinitions>
+            <DataGrid
+                AlternatingRowBackground="MintCream"
+                AlternationCount="2"
+                AutoGenerateColumns="False"
+                CanUserAddRows="True"
+                CanUserDeleteRows="False"
+                CanUserReorderColumns="False"
+                CanUserResizeColumns="False"
+                CanUserResizeRows="False"
+                CanUserSortColumns="False"
+                GridLinesVisibility="None"
+                ItemsSource="{Binding UrlEntries}"
+                SelectionMode="Single"
+                SelectionUnit="Cell">
+                <DataGrid.Columns>
+                    <DataGridTextColumn
+                        Binding="{Binding UrlString, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}"
+                        Header="URL"
+                        Width="*" />
+                </DataGrid.Columns>
+            </DataGrid>
+            <GridSplitter
+                Grid.Row="1"
+                Background="Transparent"
+                Height="8"
+                HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                ResizeDirection="Rows"
+                ShowsPreview="True" />
+            <ListView
+                Grid.Row="2"
+                x:Name="MessageListView"
+                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                ItemsSource="{Binding Messages, Mode=OneTime}">
+                <ListView.ItemTemplate>
+                    <DataTemplate x:Name="MessageDataTemplate" d:DataContext="{rfp:InAppMessageViewModel}">
+                        <Border Background="{Binding BackgroundBrush, Mode=OneTime}">
+                            <TextBlock Text="{Binding Text, Mode=OneTime}" />
+                        </Border>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </Grid>
     </DockPanel>
 </Window>
