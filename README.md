@@ -27,6 +27,8 @@ You can select the project file from an **Open…** menu, or pass it to the appl
 ResponsiveFlow.Application.exe --Project="c:/Temp/Projects/responsive-flow-project.json"
 ```
 
+You can also manually add URLs to the grid by clicking on the bottom row.
+
 The output report is saved in the subfolder of the directory specified by the `OutputDir` setting.
 If it's omitted, the default is the subfolder in the user's home directory.
 For example _c:/Users/{Username}/Documents/ResponsiveFlow/281_01-49-19/_.
@@ -99,8 +101,8 @@ The usual plots are often uglier, with multiple modes and outliers.)
 
 ### Distribution comparison
 
-The application ranks the URLs in the report according to their response times.
-It uses some basic heuristics for comparison (range test, Tukey test, three-sigma test), followed by the Mann–Whitney test (from the Perfolizer library).
+The application sorts and ranks the URLs in the report according to their response times.
+It assigns equal ranks to URLs with the same responsiveness, using the Mann-Whitney U-test (from the Perfolizer library) for the equivalence analysis.
 
 ## Implementation details
 
