@@ -5,3 +5,6 @@ resharper_unused_auto_property_accessor_global_highlighting = hint # UnusedAutoP
 [MainWindowViewModel.cs]
 dotnet_diagnostic.CA1031.severity = none # Do not catch general exception types
 resharper_collection_never_queried_global_highlighting = hint # CollectionNeverQueried.Global
+
+[UrlEntryViewModel.cs]
+dotnet_diagnostic.CA1056.severity = none # URI properties should not be strings

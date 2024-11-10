@@ -1,14 +1,16 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
-using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Machinery;
 using Microsoft.Extensions.Configuration;
@@ -17,7 +19,7 @@ using Microsoft.Win32;
 
 namespace ResponsiveFlow;
 
-public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
+public sealed partial class MainWindowViewModel : ViewModelBase, IDisposable
 {
     private static readonly JsonSerializerOptions s_options = new()
     {
@@ -47,6 +49,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         _openCommand = new AsyncRelayCommand(ExecuteOpenAsync, CanExecuteOpen);
         _runCommand = new AsyncRelayCommand(ExecuteRunAsync, CanExecuteRun);
         _stateMachine = StateMachine<IEvent>.Create(this, (State)ProjectNotLoadedState.Instance);
+        UrlEntries.CollectionChanged += OnUrlEntriesChanged;
     }
 
     public ICommand OpenCommand => _openCommand;
@@ -62,13 +65,7 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     public double ProgressValue
     {
         get => _progressValue;
-        private set
-        {
-            if (_progressValue.Equals(value))
-                return;
-            _progressValue = value;
-            OnPropertyChanged(ProgressValueChangedEventArgs);
-        }
+        private set => _ = TrySetProperty(ref _progressValue, value, ProgressValueChanged);
     }
 
     public string StateStatus => _stateMachine.CurrentState switch
@@ -84,19 +81,39 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
     public string Title => _stateMachine.CurrentState switch
     {
         LoadingState state => FormatTitle(state.ProjectPath),
-        ReadyToRunState state => FormatTitle(state.ProjectPath),
-        RunningState state => FormatTitle(state.ProjectPath),
-        CompletedState state => FormatTitle(state.ProjectPath),
+        ReadyToRunState { ProjectPath: { Length: > 0 } projectPath } => FormatTitle(projectPath),
+        RunningState { ProjectPath: { Length: > 0 } projectPath } => FormatTitle(projectPath),
+        CompletedState { ProjectPath: { Length: > 0 } projectPath } => FormatTitle(projectPath),
         _ => CreateTitle()
     };
 
     public ObservableCollection<InAppMessageViewModel> Messages { get; } = [];
 
+    public ObservableCollection<UrlEntryViewModel> UrlEntries { get; } = [];
+
     public void Dispose()
     {
+        UrlEntries.CollectionChanged -= OnUrlEntriesChanged;
         _model.ProgressChanged -= OnModelProgressChanged;
         _stoppingCts.Dispose();
     }
+
+    private void OnUrlEntriesChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (_stateMachine.CurrentState is ProjectNotLoadedState)
+            _runCommand.NotifyCanExecuteChanged();
+        if (e.Action is NotifyCollectionChangedAction.Add)
+        {
+            if (e.NewItems?.OfType<UrlEntryViewModel>() is { } newItems)
+            {
+                foreach (var newItem in newItems)
+                    newItem.ErrorsChanged += OnUrlEntryErrorsChanged;
+            }
+        }
+    }
+
+    private void OnUrlEntryErrorsChanged(object? sender, DataErrorsChangedEventArgs e) =>
+        _runCommand.NotifyCanExecuteChanged();
 
     private void OnModelProgressChanged(object? _, double e) => ProgressValue = e;
 
@@ -199,14 +216,14 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
 
     private async Task ExecuteRunAsync(CancellationToken cancellationToken)
     {
-        if (_stateMachine.CurrentState is not ProjectLoadedState currentState)
-            return;
-
         try
         {
             _ = _stateMachine.TryProcessEvent(RunEvent.Instance);
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _stoppingCts.Token);
-            var collectedDataFuture = _model.RunAsync(currentState.Project, cts.Token);
+            var projectOrFallback = _stateMachine.CurrentState is ProjectLoadedState projectLoadedState
+                ? projectLoadedState.Project
+                : new ProjectDto { Urls = GetValidUrls() };
+            var collectedDataFuture = _model.RunAsync(projectOrFallback, cts.Token);
             _ = await collectedDataFuture.ConfigureAwait(ConfigureAwaitOptions.ContinueOnCapturedContext);
             if (_stateMachine.CurrentState is ProjectLoadedState { Project: var project })
                 _ = _stateMachine.TryProcessEvent(new CompleteEvent(project));
@@ -224,7 +241,20 @@ public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
         }
     }
 
-    private bool CanExecuteRun() => _stateMachine.CurrentState is ReadyToRunState or CompletedState;
+    private bool CanExecuteRun()
+    {
+        if (_stateMachine.CurrentState is ProjectNotLoadedState)
+            return HasValidUrls();
+        return _stateMachine.CurrentState is ReadyToRunState or CompletedState;
+    }
+
+    private string[] GetValidUrls() => UrlEntries
+        .Where(it => it.IsValid)
+        .Select(it => it.UrlString).ToArray();
+
+    private bool HasValidUrls() => UrlEntries.Any(it => it.IsValid);
+
+    private ProjectDto Merge(ProjectDto project) => new() { OutputDir = project.OutputDir, Urls = GetValidUrls() };
 
     private static string CreateTitle() =>
         TryGetVersion(out string? version) ? $"{nameof(ResponsiveFlow)} v{version}" : nameof(ResponsiveFlow);

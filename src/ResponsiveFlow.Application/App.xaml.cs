@@ -30,7 +30,8 @@ public partial class App
         services.AddLogging(ConfigureLogging);
 
         services.Configure<ProjectDto>(configurationRoot.GetSection("Project"));
-        services.AddSingleton(CreateHttpClient);
+        // We deliberately don't use services.AddHttpClient() here because it has inappropriate lifetime management.
+        services.AddSingleton<IHttpClientFactory>(CustomHttpClientFactory.Instance);
         services.AddSingleton<MainModel>();
         services.AddSingleton<MainWindowViewModel>();
         services.AddSingleton<MainWindow>();
@@ -92,7 +93,11 @@ public partial class App
             return configurationBuilder.Build();
         }
     }
+}
 
-    private static HttpClient CreateHttpClient(IServiceProvider serviceProvider) =>
-        new() { Timeout = TimeSpan.FromSeconds(1.0) };
+file sealed class CustomHttpClientFactory : IHttpClientFactory
+{
+    internal static CustomHttpClientFactory Instance { get; } = new();
+
+    public HttpClient CreateClient(string name) => new();
 }

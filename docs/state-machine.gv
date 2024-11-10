@@ -8,6 +8,7 @@ digraph {
 
     edge [fontname="Times-Italic" fontsize=10]
     ProjectNotLoaded -> Loading [label=Open]
+    ProjectNotLoaded -> Running [label=Run]
     Loading -> ProjectNotLoaded [label=Cancel]
     Loading -> ReadyToRun [label=Complete]
     ReadyToRun -> Loading [label=Open]
