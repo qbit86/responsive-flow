@@ -6,6 +6,7 @@
         xmlns:rfp="clr-namespace:ResponsiveFlow;assembly=ResponsiveFlow.Presentation"
         d:DataContext="{rfp:MainWindowViewModel}"
         mc:Ignorable="d"
+        x:ClassModifier="internal"
         Height="800" Width="800"
         MinHeight="500" MinWidth="500"
         Title="{Binding Title, Mode=OneWay}">

@@ -179,5 +179,5 @@ file sealed class EquivalenceComparer : IEqualityComparer<UriCollectedData>
     public bool Equals(UriCollectedData? x, UriCollectedData? y) =>
         SampleEquivalenceComparer.Default.Equals(x?.Sample, y?.Sample);
 
-    public int GetHashCode(UriCollectedData obj) => throw new NotSupportedException();
+    public int GetHashCode(UriCollectedData obj) => obj.UriIndex;
 }

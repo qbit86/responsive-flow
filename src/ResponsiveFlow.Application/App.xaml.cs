@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace ResponsiveFlow;
 
-public partial class App
+internal sealed partial class App
 {
     [STAThread]
     internal static void Main()

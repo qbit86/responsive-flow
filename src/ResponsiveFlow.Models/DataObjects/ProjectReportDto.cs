@@ -19,7 +19,6 @@ public class ProjectReportDto
 
     public static ProjectReportDto Create(ProjectCollectedData projectCollectedData)
     {
-        ArgumentNullException.ThrowIfNull(projectCollectedData);
         var uriReports = projectCollectedData.UriCollectedDataset.Select(UriReportDto.Create).ToList();
         return new(uriReports, projectCollectedData.Ranks);
     }

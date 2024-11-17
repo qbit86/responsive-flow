@@ -19,8 +19,8 @@ public sealed partial class MainWindowViewModel
     private static bool TryGetVersion([NotNullWhen(true)] out string? version)
     {
         var assembly = Assembly.GetEntryAssembly() ?? typeof(MainWindowViewModel).Assembly;
-        var attributes = assembly.GetCustomAttributes(typeof(AssemblyInformationalVersionAttribute));
-        var informationalVersions = attributes.OfType<AssemblyInformationalVersionAttribute>()
+        var attributes = assembly.GetCustomAttributes<AssemblyInformationalVersionAttribute>();
+        var informationalVersions = attributes
             .Select(it => it.InformationalVersion);
         string? informationalVersion = informationalVersions.FirstOrDefault(it => !string.IsNullOrWhiteSpace(it));
         if (informationalVersion is null)

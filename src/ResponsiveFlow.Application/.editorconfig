@@ -1,0 +1,2 @@
+[MainWindow.xaml.cs]
+dotnet_diagnostic.CA1812.severity = none # Avoid uninstantiated internal classes

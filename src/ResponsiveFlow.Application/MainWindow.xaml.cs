@@ -5,7 +5,7 @@ using System.Windows.Controls;
 
 namespace ResponsiveFlow;
 
-public partial class MainWindow
+internal sealed partial class MainWindow
 {
     private readonly MainWindowViewModel _viewModel;
 
