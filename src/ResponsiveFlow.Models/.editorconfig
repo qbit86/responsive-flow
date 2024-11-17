@@ -3,3 +3,6 @@ dotnet_diagnostic.CA1003.severity = none # Use generic event handler instances
 
 [*Runner.cs]
 dotnet_diagnostic.CA1031.severity = none # Do not catch general exception types
+
+[*/*.cs]
+dotnet_diagnostic.IDE0130.severity = none # Namespace does not match folder structure
