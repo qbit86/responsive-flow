@@ -68,7 +68,14 @@ internal sealed partial class UriRunner
             futures.Add(future);
         }
 
-        var requestCollectedDataset = await Task.WhenAll(futures).ConfigureAwait(false);
+        List<RequestCollectedData> requestCollectedDataset = new(futures.Count);
+        var asyncEnumerable = Task.WhenEach(futures).WithCancellation(cancellationToken);
+        await foreach (var future in asyncEnumerable.ConfigureAwait(false))
+        {
+            var requestCollectedData = await future.ConfigureAwait(false);
+            requestCollectedDataset.Add(requestCollectedData);
+        }
+
         return UriCollectedData.Create(UriIndex, Uri, requestCollectedDataset);
     }
 
